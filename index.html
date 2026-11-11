@@ -47,6 +47,18 @@ tfoot td{font-weight:600;background:var(--head)}
 .fund li{margin:3px 0}
 .fund{margin:0;padding-left:18px;font-size:13px}
 .ex{font-size:11px;color:var(--warn);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.blk{border:1px solid var(--line);border-radius:6px;padding:12px;margin-top:10px}
+.blk-user{border-color:var(--accent)}
+.blkh{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.tag{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-right:6px}
+.tag-user{background:var(--accent);color:var(--accent-fg)}
+.tag-rule{background:var(--head);color:var(--mut);border:1px solid var(--line)}
+.tag-calc{background:var(--okbg);color:var(--ok)}
+small{font-size:11.5px;color:var(--mut);line-height:1.35}
+input:disabled{opacity:.75;cursor:not-allowed;background:var(--head)}
+.unl{flex-direction:row;align-items:center;gap:8px;margin-top:12px;font-size:12.5px}
+.unl input{width:auto}
+#ruleWarn:not(:empty){margin-top:8px;padding:6px 10px;border-radius:4px;background:var(--warnbg);color:var(--warn);font-weight:500}
 </style>
 </head>
 <body>
@@ -66,26 +78,37 @@ tfoot td{font-weight:600;background:var(--head)}
 
 <section class="panel">
 <h2>Parâmetros</h2>
+<div class="blk blk-user">
+<div class="blkh"><span class="tag tag-user">Você informa</span><span class="note">Estes campos mudam a cada cálculo. As parcelas são informadas na caixa logo abaixo.</span></div>
 <div class="grid">
 <label>Data-base do cálculo<input type="date" id="pBase" value="2026-11-30"></label>
-<label>Fim do IPCA-E (mês cheio)<input type="month" id="pIpcaeFim" value="2021-11"></label>
-<label>Início da SELIC<input type="month" id="pSelIni" value="2021-12"></label>
-<label>Fim da SELIC<input type="month" id="pSelFim" value="2025-08"></label>
-<label>Início IPCA-15 e taxa legal<input type="month" id="pTlIni" value="2025-09"></label>
 <label>Juros de mora até 12/2021 (% sobre o principal)<input type="text" id="pJuros" value="0" inputmode="decimal"></label>
 </div>
-<p class="note" style="margin:10px 0 0">Última competência de IPCA-15 e taxa legal: <b id="pTlFim"></b> (taxa legal e IPCA-15 aplicados no mês posterior, Nota 7 do item 4.2.2). Juros até 12/2021 só se a citação for anterior a dez/2021 (Nota 5, item 4.2.1.1).</p>
+<p class="note" style="margin:8px 0 0">Juros até 12/2021: deixe <b>0</b> se a citação foi depois de dez/2021 (Manual 2026, Nota 5 do item 4.2.1.1). Se foi antes, informe a taxa apurada.</p>
+</div>
+<div class="blk blk-rule">
+<div class="blkh"><span class="tag tag-rule">Regra do Manual 2026</span><span class="note">Já preenchidas e travadas. Valem para execução contra a Fazenda Pública, servidores (item 4.2). Não precisa alterar.</span></div>
+<div class="grid">
+<label>Fim do IPCA-E (mês cheio)<input type="month" id="pIpcaeFim" value="2021-11" disabled><small>Item 4.2.1.1 e Nota 5: IPCA-E até nov/2021.</small></label>
+<label>Início da SELIC<input type="month" id="pSelIni" value="2021-12" disabled><small>Item 4.2.2: SELIC desde dez/2021 (EC 113/2021, art. 3º).</small></label>
+<label>Fim da SELIC<input type="month" id="pSelFim" value="2025-08" disabled><small>Item 4.2.2: SELIC até ago/2025 (Tema 1.419 STF; EC 136/2025).</small></label>
+<label>Início IPCA-15 e taxa legal<input type="month" id="pTlIni" value="2025-09" disabled><small>Itens 4.2.1.1 e 4.2.2: art. 389, p.ú., e art. 406 do CC.</small></label>
+<label>Fim do IPCA-15 e taxa legal (calculado)<input type="text" id="pTlFim" disabled><small>Nota 7 do item 4.2.2: mês anterior ao da data-base.</small></label>
+</div>
+<label class="unl"><input type="checkbox" id="unl"> Desbloquear as regras (uso avançado, por exemplo outro perfil de cálculo)</label>
+<div id="ruleWarn" class="note" role="status"></div>
+</div>
 </section>
 
 <div class="cols">
 <section class="panel">
-<h2>Parcelas <span class="ex" id="exTag">exemplo fictício</span></h2>
+<h2><span class="tag tag-user">Você informa</span> Parcelas <span class="ex" id="exTag">exemplo fictício</span></h2>
 <textarea id="parc" spellcheck="false" aria-label="Parcelas"></textarea>
 <p class="note">Cole do Excel: uma parcela por linha. Colunas: rótulo ou mês (MM/AAAA), valor devido e, se o rótulo não for uma data, a competência (MM/AAAA). Exemplo: <code>Férias/2021 ⇥ 446,35 ⇥ 12/2021</code>.</p>
 <div class="row"><button id="calc">Calcular</button><button class="sec" id="exemplo">Recarregar exemplo</button></div>
 </section>
 <section class="panel" id="resumo">
-<h2>Resultado</h2>
+<h2><span class="tag tag-calc">Calculado</span> Resultado</h2>
 <div class="total"><div><div class="note" id="totLbl"></div><div class="big" id="tot"></div></div>
 <div class="kv" id="kv"></div></div>
 <div class="row" style="margin-top:12px"><button class="sec" id="cpTsv">Copiar tabela (colar no Excel)</button><span class="note" id="cpMsg" role="status"></span></div>
@@ -172,9 +195,12 @@ function params(){
 }
 
 // ---------- tela ----------
+const REGRAS={pIpcaeFim:'2021-11',pSelIni:'2021-12',pSelFim:'2025-08',pTlIni:'2025-09'};
+function regraAviso(){ const alt=Object.keys(REGRAS).some(k=>$(k).value!==REGRAS[k]); $('ruleWarn').textContent=alt?'Atenção: as regras foram alteradas e o cálculo deixa de seguir o padrão do Manual 2026 para servidores contra a Fazenda.':''; }
+$('unl').onchange=()=>{ Object.keys(REGRAS).forEach(k=>{ $(k).disabled=!$('unl').checked; if(!$('unl').checked) $(k).value=REGRAS[k]; }); render(); };
 let ultimo=null;
 function render(){
-  const P=params(); $('pTlFim').textContent=mLbl(P.tlFim);
+  const P=params(); $('pTlFim').value=mLbl(P.tlFim); regraAviso();
   const {res,err}=parseParcelas($('parc').value);
   const tb=$('tb'); const head=tb.tHead, body=tb.tBodies[0], foot=tb.tFoot;
   head.innerHTML='<tr>'+['Mês/ano','Devido','Competência','Coef. correção','Principal corrigido','Juros até 12/2021','SELIC acum.','Juros SELIC','Taxa legal acum.','Juros taxa legal','Total atualizado'].map(h=>'<th>'+h+'</th>').join('')+'</tr>';
