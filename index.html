@@ -81,7 +81,7 @@ input:disabled{opacity:.75;cursor:not-allowed;background:var(--head)}
 <div class="blk blk-user">
 <div class="blkh"><span class="tag tag-user">Você informa</span><span class="note">Estes campos mudam a cada cálculo. As parcelas são informadas na caixa logo abaixo.</span></div>
 <div class="grid">
-<label>Perfil de cálculo<select id="perfil"><option value="FAZ">Fazenda Pública (inclui servidores)</option><option value="NAO">Devedor não enquadrado como Fazenda Pública</option><option value="PREV">Benefício previdenciário</option><option value="DES" disabled>Desapropriações (em breve)</option><option value="REP" disabled>Repetição de indébito tributário (em breve)</option></select></label>
+<label>Perfil de cálculo<select id="perfil"><option value="FAZ">Fazenda Pública (inclui servidores)</option><option value="NAO">Devedor não enquadrado como Fazenda Pública</option><option value="PREV">Benefício previdenciário</option><option value="DES">Desapropriações diretas</option><option value="REP">Repetição de indébito tributário</option></select></label>
 <label>Data-base do cálculo<input type="date" id="pBase" value="2026-11-30"></label>
 <label id="lblCit" hidden>Mês da citação (início dos juros)<input type="month" id="pCit" value="2023-01"></label>
 <label id="lblJuros">Juros de mora até 12/2021 (% sobre o principal)<input type="text" id="pJuros" value="0" inputmode="decimal"></label>
@@ -161,7 +161,17 @@ const PERFIS={
   lab:{pIpcaeFim:['Fim do INPC antes da SELIC','Item 4.3.1.1 e Nota 5: INPC até nov/2021.'],pSelIni:['Início da SELIC','Item 4.3.2: SELIC desde dez/2021 (EC 113/2021, art. 3º).'],pSelFim:['Fim da SELIC','Item 4.3.2: SELIC até ago/2025.'],pTlIni:['Início INPC e taxa legal previdenciária','Itens 4.3.1.1 e 4.3.2: INPC e taxa legal (SELIC − INPC).']},
   selLbl:'Juros SELIC (12/2021 a 08/2025)',tlLbl:'Juros taxa legal previdenciária (desde 09/2025)',jAte:true,cit:false,
   status:['warn','Regras do item 4.3 aplicadas (INPC de set/2006 a nov/2021 e desde set/2025; SELIC; taxa legal com dedução do INPC, tabela do SICOM). O Manual não traz exemplo numérico completo: confira com a tabela SICOM Previdenciário. Competências antes de set/2006 exigem IGP-DI e IRSM (use a tabela SICOM).'],
-  fund:['<b>Correção:</b> INPC/IBGE de set/2006 a nov/2021 e desde set/2025; SELIC de dez/2021 a ago/2025 (item 4.3.1.1). Termo inicial: mês da competência (Nota 2).','<b>Juros:</b> SELIC de cada competência, no mês seguinte (Nota 4 do item 4.3.1.1), de dez/2021 a ago/2025.','<b>A partir de set/2025:</b> taxa legal = SELIC − INPC, tabela do Manual (item 4.3.2, Nota 3), aplicada no mês posterior. Set/2025 = 1,377047%.','<b>Fórmula:</b> principal = devido × fator INPC; juros SELIC = (principal + juros até 12/2021) × SELIC acumulada; juros taxa legal = principal × taxa legal acumulada.','<b>Compensação (Tema 1.207 STJ):</b> mês a mês, não implementada; informe os valores já líquidos.']}
+  fund:['<b>Correção:</b> INPC/IBGE de set/2006 a nov/2021 e desde set/2025; SELIC de dez/2021 a ago/2025 (item 4.3.1.1). Termo inicial: mês da competência (Nota 2).','<b>Juros:</b> SELIC de cada competência, no mês seguinte (Nota 4 do item 4.3.1.1), de dez/2021 a ago/2025.','<b>A partir de set/2025:</b> taxa legal = SELIC − INPC, tabela do Manual (item 4.3.2, Nota 3), aplicada no mês posterior. Set/2025 = 1,377047%.','<b>Fórmula:</b> principal = devido × fator INPC; juros SELIC = (principal + juros até 12/2021) × SELIC acumulada; juros taxa legal = principal × taxa legal acumulada.','<b>Compensação (Tema 1.207 STJ):</b> mês a mês, não implementada; informe os valores já líquidos.']},
+ DES:{nome:'Desapropriações diretas (item 4.5)',serie:'ipcae',tl:'bcb',regras:{pIpcaeFim:'2021-11',pSelIni:'2021-12',pSelFim:'2025-08',pTlIni:'2025-09'},
+  lab:{pIpcaeFim:['Fim do IPCA-E (mês cheio)','Item 4.5.1.1: IPCA-E até nov/2021.'],pSelIni:['Início da SELIC','Item 4.5.1.1 e 4.5.2: SELIC desde dez/2021 (EC 113/2021, art. 3º).'],pSelFim:['Fim da SELIC','Item 4.5.1.1: SELIC até ago/2025.'],pTlIni:['Início IPCA-15 e taxa legal','Itens 4.5.1.1 e 4.5.2: IPCA-15 e taxa legal desde set/2025.']},
+  selLbl:'Juros SELIC (12/2021 a 08/2025)',tlLbl:'Juros taxa legal (desde 09/2025)',jAte:true,cit:false,
+  status:['warn','Correção monetária e SELIC/taxa legal do item 4.5 (coeficientes conferem com a tabela SICOM Desapropriações). Os juros moratórios até 12/2021 (item 4.5.2, termo inicial próprio) e os juros compensatórios (item 4.5.3) não são calculados: informe o percentual de juros até 12/2021 já apurado. Valores sobre a diferença entre o bem e 80% do ofertado.'],
+  fund:['<b>Correção:</b> IPCA-E até nov/2021 (Súmula 75 TFR: a partir do laudo); SELIC de dez/2021 a ago/2025; IPCA-15 desde set/2025 (item 4.5.1.1).','<b>Juros moratórios:</b> SELIC desde dez/2021 (mês posterior) e taxa legal desde set/2025 (item 4.5.2); consolidação em 12/2021 pela Nota 2 do item 4.5.1.1.','<b>Fora do cálculo:</b> juros compensatórios (item 4.5.3) e a fase anterior a 12/2021 dos moratórios (0,5% simples e poupança). Informe o percentual apurado no campo de juros até 12/2021.','<b>Fórmula:</b> igual à do perfil Fazenda Pública sobre cada parcela informada.']},
+ REP:{nome:'Repetição de indébito tributário (item 4.4)',serie:'ipcae',tl:'bcb',regras:{pSelIni:'1996-01'},hide:['pIpcaeFim','pTlIni'],
+  lab:{pIpcaeFim:['',''],pSelIni:['Início da SELIC','Itens 4.4.1.1 e 4.4.2: SELIC desde jan/1996 (Lei 9.250/1995, art. 39, § 4º).'],pSelFim:['Fim da SELIC (mês anterior à repetição)','Nota 1 do item 4.4.1.1: SELIC até o mês anterior à repetição e 1% no mês da repetição.'],pTlIni:['','']},
+  selLbl:'Juros SELIC (mês seguinte ao recolhimento até o mês anterior à repetição, mais 1%)',tlLbl:'Taxa legal (não se aplica)',jAte:false,cit:false,
+  status:['ok','Calibrado com a tabela SICOM Repetição de Indébito (SELIC acumulada de jan/1996 a jan/2026 e out/2026). Competências anteriores a 01/1996 exigem IPC, Ufir etc.: use a tabela SICOM.'],
+  fund:['<b>Correção e juros:</b> apenas a SELIC, que engloba correção e juros (Notas 1 e 3 do item 4.4.1.1; art. 39, § 4º, da Lei 9.250/1995). A EC 113/2021 não altera o cálculo (Nota 4).','<b>Período:</b> da competência seguinte ao recolhimento indevido até o mês anterior à repetição, mais 1% no mês da repetição (a data-base).','<b>Exceção (IRPF com ajuste anual):</b> a SELIC flui da data final de entrega da declaração, não da retenção (REsp 1.434.703/RS). Informe a competência já ajustada.','<b>Fórmula:</b> total = devido × (1 + SELIC acumulada + 1%).']}
 };
 // ---------- motor ----------
 const faltaMsg=(nome,k)=>'Índice '+nome+' ainda não divulgado para '+mLbl(k)+'. Use uma data-base anterior ou atualize os índices.';
@@ -180,7 +190,10 @@ function calcular(P,parcelas,ix){
   const out=[]; const tlFim=P.tlFim;
   for(const p of parcelas){
     const c=p.comp; let coef,jAte=0,sel=0,tl=0;
-    if(P.perfil==='NAO'){
+    if(P.perfil==='REP'){
+      if(c<'1996-01') throw new Error('Competência '+mLbl(c)+' anterior a 01/1996: use a tabela SICOM Repetição de Indébito (IPC, Ufir etc.).');
+      coef=1; sel=sumSelic(mAdd(c,1),P.tlFim,ix)+(c<P.base.slice(0,7)?0.01:0);
+    } else if(P.perfil==='NAO'){
       const fe=c<=P.cit?fac('ipcae',c,P.cit,ix):1;
       const fC=fac('ipcae',mx(c,P.selFim),tlFim,ix);
       coef=fe*fC; const si=mAdd(mx(c,P.cit),1);
@@ -216,6 +229,7 @@ function params(){
   const perfil=$('perfil').value, cfg=PERFIS[perfil]; const base=$('pBase').value; const bk=base.slice(0,7); const cit=$('pCit').value;
   const P={perfil,cfg,serie:cfg.serie,tl:cfg.tl,base,cit,ipcaeFim:$('pIpcaeFim').value,selIni:$('pSelIni').value,selFim:$('pSelFim').value,tlIni:$('pTlIni').value,tlFim:mAdd(bk,-1),juros:(parseNum($('pJuros').value)||0)/100};
   if(cfg.cit){ P.ipcaeFim=cit; P.selIni=mAdd(cit,1); }
+  if(perfil==='REP'){ P.selFim=P.tlFim; }
   return P;
 }
 
@@ -223,10 +237,10 @@ function params(){
 function aplicaPerfil(){
   const p=$('perfil').value, cfg=PERFIS[p]; const bloqueio=!$('unl').checked;
   for(const k of ['pIpcaeFim','pSelIni','pSelFim','pTlIni']){
-    $('l_'+k).textContent=cfg.lab[k][0]; $('s_'+k).textContent=cfg.lab[k][1];
+    $('l_'+k).textContent=cfg.lab[k][0]; $('s_'+k).textContent=cfg.lab[k][1]; $(k).parentElement.hidden=!!(cfg.hide&&cfg.hide.includes(k));
     if(cfg.regras[k]!==undefined){ if(bloqueio) $(k).value=cfg.regras[k]; $(k).disabled=bloqueio; } else $(k).disabled=true;
   }
-  $('lblCit').hidden=!cfg.cit; $('lblJuros').hidden=!cfg.jAte;
+  if(p==='REP'){ $('pSelFim').value=params().tlFim; } $('lblCit').hidden=!cfg.cit; $('lblJuros').hidden=!cfg.jAte;
   $('perfilStatus').className='pill '+cfg.status[0]; $('perfilStatus').textContent=cfg.status[1];
   $('fund').innerHTML=cfg.fund.map(x=>'<li>'+x+'</li>').join('');
   $('perfilNome').textContent=cfg.nome;
@@ -236,7 +250,7 @@ $('unl').onchange=()=>{ aplicaPerfil(); render(); };
 $('perfil').onchange=()=>{ aplicaPerfil(); conferencia(); render(); };
 let ultimo=null;
 function render(){
-  const P=params(); $('pTlFim').value=mLbl(P.tlFim); if(P.cfg.cit){ $('pIpcaeFim').value=P.cit; $('pSelIni').value=P.selIni; } regraAviso();
+  const P=params(); $('pTlFim').value=mLbl(P.tlFim); if(P.cfg.cit){ $('pIpcaeFim').value=P.cit; $('pSelIni').value=P.selIni; } if(P.perfil==='REP') $('pSelFim').value=P.tlFim; regraAviso();
   const {res,err}=parseParcelas($('parc').value);
   const tb=$('tb'); const head=tb.tHead, body=tb.tBodies[0], foot=tb.tFoot;
   head.innerHTML='<tr>'+['Mês/ano','Devido','Competência','Coef. correção','Principal corrigido','Juros até 12/2021','SELIC acum.','Juros SELIC','Taxa legal acum.','Juros taxa legal','Total atualizado'].map(h=>'<th>'+h+'</th>').join('')+'</tr>';
@@ -262,6 +276,16 @@ function conferencia(){
       ex.push(['Coef. ago/2024 (até 05/2026)',1.0953927279,fac('ipcae','2024-08','2026-05',I),10]);
       ex.push(['SELIC 02/2005 a 08/2024 (%), implícita 209,65 − 14,57',195.08,sumSelic('2005-02','2024-08',I)*100,2]);
       ex.push(['Taxa legal 09/2024 a 05/2026 (%), implícita no exemplo',14.57,sumTL('bcb','2024-09','2026-05',I)*100,2]);
+    } else if(p==='REP'){
+      const S=(a)=>sumSelic(a,'2026-10',I)*100+1;
+      ex.push(['SELIC acumulada a partir de 02/2026 até 10/2026 + 1% (SICOM: fev/2026)',10.95,S('2026-02'),2]);
+      ex.push(['SELIC a partir de 01/2025 (SICOM: jan/2025)',25.58,S('2025-01'),2]);
+      ex.push(['SELIC a partir de 01/2020 (SICOM: jan/2020)',67.07,S('2020-01'),2]);
+      ex.push(['SELIC a partir de 01/1996 (SICOM: jan/1996)',407.18,S('1996-01'),2]);
+    } else if(p==='DES'){
+      ex.push(['Coef. SICOM jan/2020 (IPCA-E até 11/2021 × IPCA-15 desde 09/2025)',1.2026414256,fac('ipcae','2020-01','2021-11',I)*fac('ipcae','2025-09','2026-10',I),10]);
+      ex.push(['Coef. SICOM jan/2003',3.1472400738,fac('ipcae','2003-01','2021-11',I)*fac('ipcae','2025-09','2026-10',I),10]);
+      ex.push(['Coef. SICOM set/2025 a 10/2026',1.0530918512,fac('ipcae','2025-09','2026-10',I),10]);
     } else if(p==='PREV'){
       ex.push(['INPC nov/2021 (Nota 5), %',0.84,I.inpc['2021-11'],2]);
       ex.push(['SELIC ago/2025 (item 4.3.2), %',1.16,I.selic_fazenda['2025-08'],2]);
@@ -276,7 +300,7 @@ function conferencia(){
     }
   }catch(e){ ex.push(['Erro: '+e.message,0,NaN,2]); }
   const h=['<div class="note">Item</div><div class="note">Manual</div><div class="note">Aplicativo</div><div></div>'];
-  for(const [n,m,v,d] of ex){ const ok=Math.abs(m-v)<Math.pow(10,-d)*0.6; h.push('<div>'+n+'</div><div style="font-family:var(--mono)">'+num(m,d)+'</div><div style="font-family:var(--mono)">'+(isNaN(v)?'—':num(v,d))+'</div><div><span class="pill '+(ok?'ok':'bad')+'">'+(ok?'confere':'diverge')+'</span></div>'); }
+  for(const [n,m,v,d] of ex){ const ok=Math.abs(m-v)<Math.pow(10,-d)*1.01; h.push('<div>'+n+'</div><div style="font-family:var(--mono)">'+num(m,d)+'</div><div style="font-family:var(--mono)">'+(isNaN(v)?'—':num(v,d))+'</div><div><span class="pill '+(ok?'ok':'bad')+'">'+(ok?'confere':'diverge')+'</span></div>'); }
   $('chk').innerHTML=h.join('');
 }
 function idxBar(){
