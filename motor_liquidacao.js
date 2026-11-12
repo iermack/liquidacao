@@ -17,7 +17,7 @@
   else raiz.MotorLiquidacao = fabrica();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
-  const VERSAO = '2026.11.12-2'; // muda a cada alteração de regra; guarde junto com o resultado
+  const VERSAO = '2026.11.12-3'; // muda a cada alteração de regra; guarde junto com o resultado
 
   /* ---------- perfis e regras (Manual 2026) ---------- */
   const PERFIS = {
@@ -148,7 +148,7 @@
   function lerParcelas(texto) { // texto colado do Excel -> {parcelas, erros, notas}
     const parcelas = [], erros = [], notas = [];
     String(texto || '').split(/\r?\n/).forEach((ln, i) => {
-      if (!ln.trim()) return; const c = ln.split(/\t|;/).map(x => x.trim());
+      if (!ln.trim()) return; const c = ln.split(/\t|;/).map(x => x.trim()).filter(x => x !== ''); // ignora colunas vazias coladas do Excel
       let v = c[1] === undefined ? NaN : String(c[1]).replace(/R\$\s*/, '').trim(); if (typeof v === 'string') v = v.includes(',') ? v.replace(/\./g, '').replace(',', '.') : v; v = Number(v);
       let r = lerCompetencia(c[0]); if (c[2]) { const r2 = lerCompetencia(c[2]); if (r2) r = r2; }
       if (isNaN(v) || !r) { erros.push('Linha ' + (i + 1) + ': informe valor e competência (MM/AAAA, mmm/aa ou 13.º/AAAA). Não inclua a linha de títulos.'); return; }

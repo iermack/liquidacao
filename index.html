@@ -241,7 +241,7 @@ function lerCompetencia(txt){ // devolve {comp:'AAAA-MM', nota?} ou null
 function parseParcelas(txt){
   const res=[],err=[],notas=[];
   txt.split(/\r?\n/).forEach((ln,i)=>{
-    if(!ln.trim()) return; const c=ln.split(/\t|;/).map(x=>x.trim()); const val=parseNum(c[1]);
+    if(!ln.trim()) return; const c=ln.split(/\t|;/).map(x=>x.trim()).filter(x=>x!==''); const val=parseNum(c[1]);
     let r=lerCompetencia(c[0]); if(c[2]){ const r2=lerCompetencia(c[2]); if(r2) r=r2; }
     if(isNaN(val)||!r){ err.push('Linha '+(i+1)+': informe valor e competência (MM/AAAA, mmm/aa ou 13.º/AAAA). Não copie a linha de títulos.'); return; }
     if(r.nota&&!notas.includes(r.nota)) notas.push(r.nota);
