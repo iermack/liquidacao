@@ -109,7 +109,8 @@ input:disabled{opacity:.75;cursor:not-allowed;background:var(--head)}
 <section class="panel">
 <h2><span class="tag tag-user">Você informa</span> Parcelas <span class="ex" id="exTag">exemplo fictício</span></h2>
 <textarea id="parc" spellcheck="false" aria-label="Parcelas"></textarea>
-<p class="note">Cole do Excel: uma parcela por linha. Colunas: rótulo ou mês (MM/AAAA), valor devido e, se o rótulo não for uma data, a competência (MM/AAAA). Exemplo: <code>Férias/2021 ⇥ 446,35 ⇥ 12/2021</code>.</p>
+<p class="note" id="parcNote" role="status"></p>
+<p class="note">Cole do Excel: uma parcela por linha, sem a linha de títulos. Colunas: competência (<code>03/2021</code>, <code>mar/21</code>, <code>março/2021</code> ou <code>01/03/2021</code>) e valor devido. Se o rótulo não for uma competência, use 3 colunas: rótulo, valor e competência (ex.: <code>Férias/2021 ⇥ 446,35 ⇥ 12/2021</code>). Rótulos <code>13.º/AAAA</code> valem competência 12/AAAA.</p>
 <div class="row"><button id="calc">Calcular</button><button class="sec" id="exemplo">Recarregar exemplo</button></div>
 </section>
 <section class="panel" id="resumo">
@@ -227,18 +228,26 @@ function calcular(P,parcelas,ix){
   return out;
 }
 function parseNum(s){ s=String(s).trim().replace(/R\$\s*/,''); if(!s) return NaN; if(s.includes(',')) s=s.replace(/\./g,'').replace(',','.'); return Number(s); }
+const MESES_NOME={jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12};
+function lerCompetencia(txt){ // devolve {comp:'AAAA-MM', nota?} ou null
+  let s=String(txt||'').trim(); if(!s) return null;
+  const sem=s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); let m;
+  if((m=/^13\s*[.ºo°]*\s*[\/\-\s]?\s*(?:sal\w*\s*)?[\/\-\s]?\s*(\d{4})\b/.exec(sem))) return {comp:m[1]+'-12',nota:'13.º/'+m[1]+' tratado como competência 12/'+m[1]};
+  if((m=/(\d{1,2})\s*\/\s*(\d{4})\b/.exec(sem))&&+m[1]>=1&&+m[1]<=12) return {comp:m[2]+'-'+m[1].padStart(2,'0')};
+  if((m=/\b(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-z]*[\s\/\-\.]*(\d{2}|\d{4})\b/.exec(sem))){ const y=m[2].length===2?2000+(+m[2]):+m[2]; return {comp:y+'-'+String(MESES_NOME[m[1]]).padStart(2,'0')}; }
+  if((m=/^(\d{1,2})\s*[\/\-\.]\s*(\d{2})$/.exec(sem))&&+m[1]>=1&&+m[1]<=12) return {comp:(2000+(+m[2]))+'-'+m[1].padStart(2,'0')};
+  return null;
+}
 function parseParcelas(txt){
-  const res=[],err=[];
+  const res=[],err=[],notas=[];
   txt.split(/\r?\n/).forEach((ln,i)=>{
-    if(!ln.trim()) return; const c=ln.split(/\t|;/).map(x=>x.trim());
-    let lbl=c[0],val=parseNum(c[1]),comp=null,m;
-    if((m=/^(\d{1,2})\/(\d{4})$/.exec(c[0]))) comp=m[2]+'-'+m[1].padStart(2,'0');
-    if(c[2]&&(m=/^(\d{1,2})\/(\d{4})$/.exec(c[2]))) comp=m[2]+'-'+m[1].padStart(2,'0');
-    if(!comp&&(m=/(\d{1,2})\/(\d{4})/.exec(c[0]))) comp=m[2]+'-'+m[1].padStart(2,'0');
-    if(isNaN(val)||!comp){ err.push('Linha '+(i+1)+': informe valor e competência (MM/AAAA).'); return; }
-    res.push({lbl,valor:val,comp});
+    if(!ln.trim()) return; const c=ln.split(/\t|;/).map(x=>x.trim()); const val=parseNum(c[1]);
+    let r=lerCompetencia(c[0]); if(c[2]){ const r2=lerCompetencia(c[2]); if(r2) r=r2; }
+    if(isNaN(val)||!r){ err.push('Linha '+(i+1)+': informe valor e competência (MM/AAAA, mmm/aa ou 13.º/AAAA). Não copie a linha de títulos.'); return; }
+    if(r.nota&&!notas.includes(r.nota)) notas.push(r.nota);
+    res.push({lbl:c[0],valor:val,comp:r.comp});
   });
-  return {res,err};
+  return {res,err,notas};
 }
 function params(){
   const perfil=$('perfil').value, cfg=PERFIS[perfil]; const base=$('pBase').value; const bk=base.slice(0,7); const cit=$('pCit').value;
@@ -266,7 +275,7 @@ $('perfil').onchange=()=>{ aplicaPerfil(); conferencia(); render(); };
 let ultimo=null;
 function render(){
   const P=params(); $('pTlFim').value=mLbl(P.tlFim); if(P.cfg.cit){ $('pIpcaeFim').value=P.cit; $('pSelIni').value=P.selIni; } if(P.perfil==='REP') $('pSelFim').value=P.tlFim; regraAviso();
-  const {res,err}=parseParcelas($('parc').value);
+  const {res,err,notas}=parseParcelas($('parc').value); $('parcNote').textContent=notas.join('. ')+(notas.length?'. Para outra competência, informe-a na 3.ª coluna.':'');
   const tb=$('tb'); const head=tb.tHead, body=tb.tBodies[0], foot=tb.tFoot;
   head.innerHTML='<tr>'+['Mês/ano','Devido','Competência','Coef. correção','Principal corrigido','Juros até 12/2021','SELIC acum.','Juros SELIC','Taxa legal acum.','Juros taxa legal','Total atualizado'].map(h=>'<th>'+h+'</th>').join('')+'</tr>';
   body.innerHTML=''; foot.innerHTML=''; $('kv').innerHTML='';
@@ -282,6 +291,7 @@ function render(){
   $('totLbl').textContent='Total atualizado em '+d; $('tot').textContent='R$ '+brl(S.total);
   const kv=[['Valor devido (nominal)',S.valor],['Principal corrigido',S.princ]]; if(P.cfg.jAte) kv.push(['Juros até 12/2021',S.jAte]); kv.push([P.cfg.selLbl,S.jSel],[P.cfg.tlLbl,S.jTl]);
   $('kv').innerHTML=kv.map(([a,b])=>'<span>'+a+'</span><span>R$ '+brl(b)+'</span>').join('');
+  const fut=rows.filter(r=>r.comp>P.tlFim).map(r=>r.lbl); if(fut.length) $('parcNote').textContent=($('parcNote').textContent?$('parcNote').textContent+'. ':'')+'Atenção: competência posterior ao mês anterior à data-base (sem correção nem juros): '+fut.join(', ')+'.';
   ultimo={rows,S};
 }
 function conferencia(){
