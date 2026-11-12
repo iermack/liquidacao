@@ -57,6 +57,7 @@ tfoot td{font-weight:600;background:var(--head)}
 .tag-calc{background:var(--okbg);color:var(--ok)}
 small{font-size:11.5px;color:var(--mut);line-height:1.35}
 input:disabled{opacity:.75;cursor:not-allowed;background:var(--head)}
+.ori{flex-direction:row;align-items:center;gap:6px;font-size:12px}
 .unl{flex-direction:row;align-items:center;gap:8px;margin-top:12px;font-size:12.5px}
 .unl input{width:auto}
 #ruleWarn:not(:empty){margin-top:8px;padding:6px 10px;border-radius:4px;background:var(--warnbg);color:var(--warn);font-weight:500}
@@ -118,7 +119,7 @@ input:disabled{opacity:.75;cursor:not-allowed;background:var(--head)}
 <h2><span class="tag tag-calc">Calculado</span> Resultado</h2>
 <div class="total"><div><div class="note" id="totLbl"></div><div class="big" id="tot"></div></div>
 <div class="kv" id="kv"></div></div>
-<div class="row" style="margin-top:12px"><button class="sec" id="cpTsv">Copiar tabela (colar no Excel)</button><button class="sec" id="exXlsx">Exportar Excel (.xlsx)</button><button class="sec" id="exPdf">Exportar PDF</button><span class="note" id="cpMsg" role="status"></span></div>
+<div class="row" style="margin-top:12px"><button class="sec" id="cpTsv">Copiar tabela (colar no Excel)</button><button class="sec" id="exXlsx">Exportar Excel (.xlsx)</button><label class="ori">PDF em A4, margens de 1,5 cm<select id="pdfOri"><option value="L">Paisagem</option><option value="P">Retrato</option></select></label><button class="sec" id="exPdf">Exportar PDF</button><span class="note" id="cpMsg" role="status"></span></div>
 </section>
 </div>
 
@@ -364,19 +365,20 @@ function dadosExport(){
   const cab=['Mês/ano','Devido (R$)','Competência','Coef. de correção','Principal corrigido (R$)','Juros até 12/2021 (R$)','SELIC acum.','Juros SELIC (R$)','Taxa legal acum.','Juros taxa legal (R$)','Total atualizado (R$)'];
   const sub=['','','','','','','',(P.perfil==='REP'?'mais 1%':P.perfil==='NAO'?'pós-citação a 08/2024':'12/2021 a 08/2025'),'',(P.perfil==='REP'?'não se aplica':mLbl(P.tlIni)+' a '+mLbl(P.tlFim)),''];
   const termo=P.cfg.cit?mLbl(P.cit):(P.citJ?mLbl(P.citJ):'não informado');
-  const info=[['Perfil',cfg.nome],['Data-base',d],['Termo inicial dos juros de mora',cfg.jAte||cfg.cit?termo:'—'],['Última competência de índices aplicada',mLbl(P.tlFim)],
-    ['Índices atualizados em',I.atualizado_em?I.atualizado_em.slice(0,10).split('-').reverse().join('/'):'—'],['Situação do perfil',cfg.status[1]],
-    ['Gerado em',p2(quando.getDate())+'/'+p2(quando.getMonth()+1)+'/'+quando.getFullYear()+' '+p2(quando.getHours())+':'+p2(quando.getMinutes())]];
+  const termoTxt=P.cfg.cit?mLbl(P.cit):(P.citJ?mLbl(P.citJ):'');
+  const info=[['Perfil',cfg.nome],['Data-base',d]]; if((cfg.jAte||cfg.cit)&&termoTxt) info.push(['Termo inicial dos juros de mora',termoTxt]);
+  const indicesEm=I.atualizado_em?I.atualizado_em.slice(0,10).split('-').reverse().join('/'):'-';
+  const infoTec=[['Última competência de índices aplicada',mLbl(P.tlFim)],['Índices atualizados em',indicesEm]];
   const S=ultimo.S;
   const resumo=[['Valor devido (nominal)',S.valor],['Principal corrigido',S.princ]]; if(cfg.jAte) resumo.push(['Juros até 12/2021',S.jAte]); resumo.push([cfg.selLbl,S.jSel],[cfg.tlLbl,S.jTl],['TOTAL ATUALIZADO EM '+d,S.total]);
   const linhas=ultimo.rows.map(r=>({lbl:r.lbl,valor:r.valor,comp:r.comp,coef:r.coef,princ:r.princ,jAte:r.jAte,sel:r.sel,jSel:r.jSel,tl:r.tl,jTl:r.jTl,total:r.total}));
   const fund=cfg.fund.map(x=>x.replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' '));
-  return {titulo:'Liquidação – Manual de Cálculos da Justiça Federal (ed. 2026, Res. CJF 990/2026)',info,cab,sub,linhas,total:S,resumo,fund,nome:'liquidacao_'+P.perfil+'_'+P.base};
+  return {titulo:'Liquidação – Manual de Cálculos da Justiça Federal (ed. 2026, Res. CJF 990/2026)',info,infoTec,indicesEm,cab,sub,linhas,total:S,resumo,fund,nome:'liquidacao_'+P.perfil+'_'+P.base};
 }
 function montaXlsx(D){
   const enc=new TextEncoder(); const L=[]; // L: linhas de células [[{v,s}]]
   const t=(v,s=0)=>({v,s}); const n=(v,s)=>({v,s,n:1});
-  L.push([t(D.titulo,8)]); for(const [k,v] of D.info) L.push([t(k,1),t(v,9)]); L.push([]);
+  L.push([t(D.titulo,8)]); for(const [k,v] of D.info.concat(D.infoTec)) L.push([t(k,1),t(v,9)]); L.push([]);
   const ih=L.length+1; L.push(D.cab.map(c=>t(c,7)));
   if(D.sub.some(x=>x)) L.push(D.sub.map(c=>t(c,10)));
   for(const r of D.linhas){ const [y,m]=r.comp.split('-').map(Number);
@@ -411,45 +413,63 @@ function montaXlsx(D){
   return _zip([{nome:'[Content_Types].xml',dados:enc.encode(ct)},{nome:'_rels/.rels',dados:enc.encode(rels)},{nome:'xl/workbook.xml',dados:enc.encode(wb)},{nome:'xl/_rels/workbook.xml.rels',dados:enc.encode(wbr)},{nome:'xl/styles.xml',dados:enc.encode(st)},
     {nome:'xl/worksheets/sheet1.xml',dados:enc.encode(sheet(L,[26,14,12,16,16,14,12,14,14,14,16]))},{nome:'xl/worksheets/sheet2.xml',dados:enc.encode(sheet(f2,[160]))}]);
 }
-function montaPdf(D){
-  const W=842,H=595,M=28; const larg=[48,62,44,68,66,54,52,62,62,62,70]; const tw=larg.reduce((a,b)=>a+b,0); const esc=larg.map(x=>x*(W-2*M)/tw);
-  const wch=(c,s,neg)=>{ if('0123456789'.includes(c)) return .556*s; if(',.'.includes(c)) return .278*s; if(c==='%') return .889*s; if(c==='-') return .333*s; if(c==='/'||c===' ') return .278*s; return (neg?.58:.5)*s; };
-  const tl=(txt,s,neg)=>[...txt].reduce((a,c)=>a+wch(c,s,neg),0);
+// larguras Helvetica (AFM) em milésimos de em; negrito usa a tabela própria
+const _HW={' ':278,'!':278,'"':355,'#':556,'$':556,'%':889,'&':667,"'":191,'(':333,')':333,'*':389,'+':584,',':278,'-':333,'.':278,'/':278,':':278,';':278,'<':584,'=':584,'>':584,'?':556,'@':1015,A:667,B:667,C:722,D:722,E:667,F:611,G:778,H:722,I:278,J:500,K:667,L:556,M:833,N:722,O:778,P:667,Q:778,R:722,S:667,T:611,U:722,V:667,W:944,X:667,Y:667,Z:611,'[':278,'\\':278,']':278,'^':469,_:556,'`':333,a:556,b:556,c:500,d:556,e:556,f:278,g:556,h:556,i:222,j:222,k:500,l:222,m:833,n:556,o:556,p:556,q:556,r:333,s:500,t:278,u:556,v:500,w:722,x:500,y:500,z:500,'{':334,'|':260,'}':334,'~':584,'º':365,'ª':370,'×':584};
+const _HB={' ':278,'!':333,'"':474,'#':556,'$':556,'%':889,'&':722,"'":238,'(':333,')':333,'*':389,'+':584,',':278,'-':333,'.':278,'/':278,':':333,';':333,'<':584,'=':584,'>':584,'?':611,'@':975,A:722,B:722,C:722,D:722,E:667,F:611,G:778,H:722,I:278,J:556,K:722,L:611,M:833,N:722,O:778,P:667,Q:778,R:722,S:667,T:611,U:722,V:667,W:944,X:667,Y:667,Z:611,a:556,b:611,c:556,d:611,e:556,f:333,g:611,h:611,i:278,j:278,k:556,l:278,m:889,n:611,o:611,p:611,q:611,r:389,s:556,t:333,u:611,v:556,w:778,x:556,y:556,z:500,'º':365,'ª':370,'×':584};
+for(let d=0;d<10;d++){_HW[String(d)]=556;_HB[String(d)]=556;}
+function _larg(s,t,neg){ const T=neg?_HB:_HW; let w=0; for(const c of String(s)){ let k=T[c]; if(k===undefined){ const b=c.normalize('NFD')[0]; k=T[b]; } w+=(k===undefined?600:k); } return w*t/1000; }
+function montaPdf(D,ori){
+  ori=ori==='P'?'P':'L'; const MM=42.52, W=ori==='L'?841.89:595.28, H=ori==='L'?595.28:841.89, X0=MM, X1=W-MM, YT=H-MM, YB=MM+14, AV=X1-X0, PAD=2.5;
   const lat=s=>{ s=String(s).replace(/[–—−]/g,'-').replace(/[“”]/g,'"').replace(/[‘’]/g,"'").replace(/≤/g,'<=').replace(/≥/g,'>=').replace(/→/g,'->'); return [...s].map(c=>c.charCodeAt(0)<256?c:'?').join('').replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); };
-  const paginas=[]; let ops=[]; let y=0;
-  const txt=(x,yy,s,t,f)=>ops.push('BT /'+(f||'F1')+' '+t+' Tf '+x.toFixed(2)+' '+yy.toFixed(2)+' Td ('+lat(s)+') Tj ET');
-  const txtD=(xd,yy,s,t,f)=>txt(xd-tl(String(s),t,f==='F2'),yy,s,t,f);
-  const linha=(x1,y1,x2,y2,w)=>ops.push((w||.5)+' w '+x1.toFixed(2)+' '+y1.toFixed(2)+' m '+x2.toFixed(2)+' '+y2.toFixed(2)+' l S');
-  const fundo=(x,yy,w,h,g)=>ops.push(g+' g '+x.toFixed(2)+' '+yy.toFixed(2)+' '+w.toFixed(2)+' '+h.toFixed(2)+' re f 0 g');
-  const nova=()=>{ if(ops.length) paginas.push(ops); ops=[]; y=H-M; };
-  const quebra=(s,t,maxW)=>{ const pal=String(s).split(/\s+/); const out=[]; let cur=''; for(const p of pal){ const tent=cur?cur+' '+p:p; if(tl(tent,t)>maxW&&cur){out.push(cur);cur=p;} else cur=tent; } if(cur) out.push(cur); return out; };
   const fmt=v=>v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   const pc=(v,d)=>(v*100).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d})+'%';
-  const cabTab=()=>{ const h=26; fundo(M,y-h,W-2*M,h,.91); let x=M; const nomes=[['Mês/ano',''],['Devido',''],['Compet.',''],['Coef. de','correção'],['Principal','corrigido'],['Juros até','12/2021'],['SELIC acum.',D.sub[7]],['Juros','SELIC'],['Taxa legal acum.',D.sub[9]],['Juros','taxa legal'],['Total','atualizado']];
-    nomes.forEach((nm,i)=>{ const dir=i>0; const xd=dir?x+esc[i]-3:x+3; const f=(s,yy,t,fn)=>dir?txtD(xd,yy,s,t,fn):txt(xd,yy,s,t,fn);
-      if(nm[1]){ f(nm[0],y-10,6.6,'F2'); f(nm[1],y-20,6,'F1'); } else f(nm[0],y-16,6.6,'F2'); x+=esc[i]; }); linha(M,y-h,W-M,y-h,.7); y-=h; };
-  nova(); txt(M,y-12,D.titulo,12,'F2'); y-=22;
-  for(const [k,v] of D.info){ const ls=quebra(v,8,W-2*M-150); txt(M,y-8,k,8,'F2'); ls.forEach((l,i)=>txt(M+150,y-8-i*10,l,8)); y-=Math.max(1,ls.length)*10+1; }
-  y-=8; cabTab(); const RH=11.2;
-  const num=(r)=>[r.lbl,fmt(r.valor),mLbl(r.comp),r.coef.toFixed(10).replace('.',','),fmt(r.princ),fmt(r.jAte),pc(r.sel,2),fmt(r.jSel),pc(r.tl,6),fmt(r.jTl),fmt(r.total)];
-  for(const r of D.linhas){ if(y-RH<M+16){ nova(); cabTab(); } let x=M; num(r).forEach((c,i)=>{ if(i===0) txt(x+3,y-8.5,c,7); else txtD(x+esc[i]-3,y-8.5,c,7); x+=esc[i]; }); linha(M,y-RH,W-M,y-RH,.2); y-=RH; }
-  if(y-RH*2<M+16){ nova(); cabTab(); } { let x=M; const S=D.total; const tot=['Total',fmt(S.valor),'','',fmt(S.princ),fmt(S.jAte),'',fmt(S.jSel),'',fmt(S.jTl),fmt(S.total)]; fundo(M,y-RH,W-2*M,RH,.91);
-    tot.forEach((c,i)=>{ if(c){ if(i===0) txt(x+3,y-8.5,c,7,'F2'); else txtD(x+esc[i]-3,y-8.5,c,7,'F2'); } x+=esc[i]; }); linha(M,y-RH,W-M,y-RH,.7); y-=RH+10; }
-  const bloco=(titulo,itens,tipo)=>{ const alt=12+itens.reduce((a,it)=>a+(tipo==='kv'?11:quebra(it,7.5,W-2*M).length*9.5+2),0); if(y-alt<M+16) nova(); txt(M,y-9,titulo,9,'F2'); y-=14;
-    for(const it of itens){ if(tipo==='kv'){ const b=it[0].startsWith('TOTAL'); txt(M,y-8,it[0],8,b?'F2':'F1'); txtD(M+330,y-8,fmt(it[1]),8,b?'F2':'F1'); y-=11; } else { for(const l of quebra(it,7.5,W-2*M)){ txt(M,y-7.5,l,7.5); y-=9.5; } y-=2; } } y-=6; };
+  const num=r=>[r.lbl,fmt(r.valor),r.coef.toFixed(10).replace('.',','),fmt(r.princ),fmt(r.jAte),pc(r.sel,2),fmt(r.jSel),pc(r.tl,6),fmt(r.jTl),fmt(r.total)];
+  const S=D.total, totL=['Total',fmt(S.valor),'',fmt(S.princ),fmt(S.jAte),'',fmt(S.jSel),'',fmt(S.jTl),fmt(S.total)];
+  const heads=[['Mês/ano',''],['Devido (R$)',''],['Coef. de correção',''],['Principal corrigido (R$)',''],['Juros até 12/2021 (R$)',''],['SELIC acum.',D.sub[7]],['Juros SELIC (R$)',''],['Taxa legal acum.',D.sub[9]],['Juros taxa legal (R$)',''],['Total atualizado (R$)','']];
+  const linhasTxt=D.linhas.map(num); const NC=10;
+  // 1) maior corpo de letra em que todas as colunas cabem SEM cortar número; o cabeçalho quebra linhas
+  const palavraMax=(txt,hs)=>Math.max(0,...String(txt).split(/\s+/).map(p=>_larg(p,hs,true)));
+  let fs=8, cols=null;
+  for(; fs>=4.2; fs=Math.round((fs-0.1)*10)/10){ const hs=Math.min(6.6,fs); const w=[];
+    for(let i=0;i<NC;i++){ let m=Math.max(...linhasTxt.map(r=>_larg(r[i],fs)),_larg(totL[i],fs,true)); m=Math.max(m,palavraMax(heads[i][0],hs),heads[i][1]?palavraMax(heads[i][1],hs*.9):0); w.push(m+2*PAD); }
+    if(w.reduce((a,b)=>a+b,0)<=AV){ cols=w; break; } }
+  if(!cols){ fs=4.2; const hs=4.2; cols=[]; for(let i=0;i<NC;i++){ let m=Math.max(...linhasTxt.map(r=>_larg(r[i],fs)),_larg(totL[i],fs,true)); cols.push(Math.max(m,palavraMax(heads[i][0],hs))+2*PAD); } }
+  const hs=Math.min(6.8,fs), soma=cols.reduce((a,b)=>a+b,0), extra=Math.max(0,AV-soma)/NC; const esc=cols.map(c=>c+extra);
+  const RH=fs+3.6, LH=hs+1.6;
+  const paginas=[]; let ops=[], y=0;
+  const txt=(x,yy,s,t,f)=>ops.push('BT /'+(f||'F1')+' '+t+' Tf '+x.toFixed(2)+' '+yy.toFixed(2)+' Td ('+lat(s)+') Tj ET');
+  const txtD=(xd,yy,s,t,f)=>txt(xd-_larg(s,t,f==='F2'),yy,s,t,f);
+  const linha=(x1,y1,x2,y2,w)=>ops.push((w||.5)+' w '+x1.toFixed(2)+' '+y1.toFixed(2)+' m '+x2.toFixed(2)+' '+y2.toFixed(2)+' l S');
+  const fundo=(x,yy,w,h,g)=>ops.push(g+' g '+x.toFixed(2)+' '+yy.toFixed(2)+' '+w.toFixed(2)+' '+h.toFixed(2)+' re f 0 g');
+  const nova=()=>{ if(ops.length) paginas.push(ops); ops=[]; y=YT; };
+  const quebra=(s,t,maxW,neg)=>{ const pal=String(s).split(/\s+/).filter(Boolean); const out=[]; let cur=''; for(const p of pal){ const tent=cur?cur+' '+p:p; if(_larg(tent,t,neg)>maxW&&cur){out.push(cur);cur=p;} else cur=tent; } if(cur) out.push(cur); return out; };
+  const cabTab=()=>{ const parts=heads.map((h,i)=>quebra(h[0],hs,esc[i]-2*PAD,true).map(s=>[s,'F2']).concat(h[1]?quebra(h[1],hs,esc[i]-2*PAD).map(s=>[s,'F1']):[]));
+    const nl=Math.max(...parts.map(p=>p.length)), h=nl*LH+7; fundo(X0,y-h,AV,h,.91); let x=X0;
+    parts.forEach((pl,i)=>{ pl.forEach((l,k)=>{ const yy=y-h+4.5+(pl.length-1-k)*LH; if(i===0) txt(x+PAD,yy,l[0],hs,l[1]); else txtD(x+esc[i]-PAD,yy,l[0],hs,l[1]); }); x+=esc[i]; });
+    linha(X0,y-h,X1,y-h,.7); y-=h; };
+  nova(); txt(X0,y-12,D.titulo,ori==='L'?12:10.5,'F2'); y-=ori==='L'?22:30;
+  if(ori==='P'&&_larg(D.titulo,10.5,true)>AV){ ops.pop(); const tl_=quebra(D.titulo,10.5,AV,true); tl_.forEach((l,i)=>txt(X0,YT-12-i*13,l,10.5,'F2')); y=YT-12-tl_.length*13-6; }
+  for(const [k,v] of D.info){ const ls=quebra(v,8,AV-150); txt(X0,y-8,k,8,'F2'); ls.forEach((l,i)=>txt(X0+150,y-8-i*10,l,8)); y-=Math.max(1,ls.length)*10+1; }
+  y-=8; cabTab();
+  const linhaTab=(cells,neg)=>{ if(y-RH<YB){ nova(); cabTab(); } if(neg) fundo(X0,y-RH,AV,RH,.91); let x=X0; cells.forEach((c,i)=>{ if(c){ if(i===0) txt(x+PAD,y-fs-0.6,c,fs,neg?'F2':'F1'); else txtD(x+esc[i]-PAD,y-fs-0.6,c,fs,neg?'F2':'F1'); } x+=esc[i]; }); linha(X0,y-RH,X1,y-RH,neg?.7:.2); y-=RH; };
+  linhasTxt.forEach(c=>linhaTab(c,false)); linhaTab(totL,true); y-=10;
+  const bloco=(titulo,itens,tipo)=>{ const alt=14+itens.reduce((a,it)=>a+(tipo==='kv'?11:quebra(it,7.5,AV).length*9.5+2),0); if(y-alt<YB&&alt<(YT-YB)) nova(); txt(X0,y-9,titulo,9,'F2'); y-=14;
+    for(const it of itens){ if(tipo==='kv'){ if(y-11<YB) nova(); const b=it[0].startsWith('TOTAL'); txt(X0,y-8,it[0],8,b?'F2':'F1'); txtD(X0+Math.min(330,AV),y-8,fmt(it[1]),8,b?'F2':'F1'); y-=11; } else { for(const l of quebra(it,7.5,AV)){ if(y-9.5<YB) nova(); txt(X0,y-7.5,l,7.5); y-=9.5; } y-=2; } } y-=6; };
   bloco('RESUMO (R$)',D.resumo,'kv'); bloco('FUNDAMENTOS APLICADOS',D.fund,'txt'); nova(); const pag=paginas.length;
-  paginas.forEach((p,i)=>p.push('BT /F1 7 Tf '+M+' 16 Td (Pagina '+(i+1)+' de '+pag+' - Calculo conforme o Manual de Calculos da Justica Federal (ed. 2026); confira os dados antes de usar em peca.) Tj ET'));
+  paginas.forEach((p,i)=>{ const fonte='Índices: PJe-Calc (TRT3), Banco Central e SICOM/CJF, atualizados em '+D.indicesEm+'. Cálculo conforme o Manual de Cálculos da Justiça Federal (ed. 2026).'; const pg='Página '+(i+1)+' de '+pag;
+    p.push('BT /F1 6.5 Tf '+X0+' '+(MM+2)+' Td ('+lat(fonte)+') Tj ET'); p.push('BT /F1 6.5 Tf '+(X1-_larg(pg,6.5)).toFixed(2)+' '+(MM+2)+' Td ('+lat(pg)+') Tj ET'); });
   const objs=[]; const add=s=>{objs.push(s);return objs.length;}; add('<< /Type /Catalog /Pages 2 0 R >>'); add(''); add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>'); add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
-  const kids=[]; for(const p of paginas){ const c=p.join('\n'); const cid=add('<< /Length '+c.length+' >>\nstream\n'+c+'\nendstream'); const pid=add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+W+' '+H+'] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents '+cid+' 0 R >>'); kids.push(pid+' 0 R'); }
+  const kids=[]; for(const p of paginas){ const c=p.join('\n'); const cid=add('<< /Length '+c.length+' >>\nstream\n'+c+'\nendstream'); const pid=add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+W.toFixed(2)+' '+H.toFixed(2)+'] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents '+cid+' 0 R >>'); kids.push(pid+' 0 R'); }
   objs[1]='<< /Type /Pages /Kids ['+kids.join(' ')+'] /Count '+kids.length+' >>';
   let out='%PDF-1.4\n'; const offs=[]; objs.forEach((o,i)=>{ offs.push(out.length); out+=(i+1)+' 0 obj\n'+o+'\nendobj\n'; }); const xr=out.length;
-  out+='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n'+offs.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('')+'trailer\n<< /Size '+(objs.length+1)+' /Root 1 0 R >>\nstartxref\n'+xr+'\n%%EOF'; 
+  out+='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n'+offs.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('')+'trailer\n<< /Size '+(objs.length+1)+' /Root 1 0 R >>\nstartxref\n'+xr+'\n%%EOF';
   const bytes=new Uint8Array(out.length); for(let i=0;i<out.length;i++) bytes[i]=out.charCodeAt(i)&255; return bytes;
 }
 function baixar(bytes,nome,tipo){ const url=URL.createObjectURL(new Blob([bytes],{type:tipo})); const a=document.createElement('a'); a.href=url; a.download=nome; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1500); }
 function exportar(formato){ const D=dadosExport(); if(!D){ $('cpMsg').textContent='Calcule primeiro: não há resultado para exportar.'; return; }
-  try{ if(formato==='xlsx') baixar(montaXlsx(D),D.nome+'.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); else baixar(montaPdf(D),D.nome+'.pdf','application/pdf'); $('cpMsg').textContent='Arquivo gerado ('+(formato==='xlsx'?'Excel':'PDF')+'). Se o download não iniciar, abra o site em https://iermack.github.io/liquidacao/.'; }
+  try{ if(formato==='xlsx') baixar(montaXlsx(D),D.nome+'.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); else { const o=$('pdfOri').value; try{localStorage.setItem('liq_pdf_ori',o);}catch(e){} baixar(montaPdf(D,o),D.nome+(o==='P'?'_retrato':'_paisagem')+'.pdf','application/pdf'); } $('cpMsg').textContent='Arquivo gerado ('+(formato==='xlsx'?'Excel':'PDF')+'). Se o download não iniciar, abra o site em https://iermack.github.io/liquidacao/.'; }
   catch(e){ $('cpMsg').textContent='Não foi possível gerar o arquivo: '+e.message; } }
+try{ const o=localStorage.getItem('liq_pdf_ori'); if(o==='P'||o==='L') $('pdfOri').value=o; }catch(e){}
 $('exXlsx').onclick=()=>exportar('xlsx'); $('exPdf').onclick=()=>exportar('pdf');
 
 $('calc').onclick=render;
