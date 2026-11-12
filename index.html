@@ -118,7 +118,7 @@ input:disabled{opacity:.75;cursor:not-allowed;background:var(--head)}
 <h2><span class="tag tag-calc">Calculado</span> Resultado</h2>
 <div class="total"><div><div class="note" id="totLbl"></div><div class="big" id="tot"></div></div>
 <div class="kv" id="kv"></div></div>
-<div class="row" style="margin-top:12px"><button class="sec" id="cpTsv">Copiar tabela (colar no Excel)</button><span class="note" id="cpMsg" role="status"></span></div>
+<div class="row" style="margin-top:12px"><button class="sec" id="cpTsv">Copiar tabela (colar no Excel)</button><button class="sec" id="exXlsx">Exportar Excel (.xlsx)</button><button class="sec" id="exPdf">Exportar PDF</button><span class="note" id="cpMsg" role="status"></span></div>
 </section>
 </div>
 
@@ -340,6 +340,118 @@ function idxBar(){
   $('idxbar').innerHTML=['IPCA-E/IPCA-15 até '+mLbl(last(I.ipcae)),'SELIC até '+mLbl(last(I.selic_fazenda)),'Taxa legal (BCB) até '+mLbl(last(I.taxa_legal_bcb)),'Gerado em '+when+(I.origem&&I.origem.arquivo?' · '+I.origem.arquivo:'')].map(t=>'<span class="pill ok">'+t+'</span>').join('');
 }
 function exemploTxt(){ return EXEMPLO.map(r=>r[0].match(/^\d{4}-\d{2}$/)?mLbl(r[0]):r[0]).map((l,i)=>l+'\t'+brl(EXEMPLO[i][1])+'\t'+mLbl(EXEMPLO[i][2])).join('\n'); }
+// ---------- exportação para Excel (.xlsx) e PDF, sem bibliotecas ----------
+const _crcT=(()=>{const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function _crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=_crcT[(c^b[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0;}
+function _zip(arquivos){ // arquivos: [{nome, dados:Uint8Array}] (sem compressão)
+  const enc=new TextEncoder(), partes=[], central=[]; let off=0;
+  const u16=n=>[n&255,(n>>8)&255], u32=n=>[n&255,(n>>8)&255,(n>>16)&255,(n>>>24)&255];
+  for(const a of arquivos){ const nome=enc.encode(a.nome), crc=_crc32(a.dados), n=a.dados.length;
+    const lh=new Uint8Array([0x50,0x4b,3,4,20,0,0,8,0,0,0,0,0x21,0,...u32(crc),...u32(n),...u32(n),...u16(nome.length),0,0]);
+    partes.push(lh,nome,a.dados);
+    central.push(new Uint8Array([0x50,0x4b,1,2,20,0,20,0,0,8,0,0,0,0,0x21,0,...u32(crc),...u32(n),...u32(n),...u16(nome.length),0,0,0,0,0,0,0,0,0,0,0,0,...u32(off)]),nome);
+    off+=lh.length+nome.length+n; }
+  const cdTam=central.reduce((s,x)=>s+x.length,0);
+  const fim=new Uint8Array([0x50,0x4b,5,6,0,0,0,0,...u16(arquivos.length),...u16(arquivos.length),...u32(cdTam),...u32(off),0,0]);
+  const todos=[...partes,...central,fim]; const out=new Uint8Array(todos.reduce((s,x)=>s+x.length,0)); let p=0; for(const x of todos){out.set(x,p);p+=x.length;} return out;
+}
+const _esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const _col=n=>{let s='';while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26);}return s;};
+const _serie=(y,m)=>Math.round(Date.UTC(y,m-1,1)/86400000)+25569;
+function dadosExport(){
+  if(!ultimo) return null; const P=params(), cfg=P.cfg, d=P.base.split('-').reverse().join('/');
+  const quando=new Date(); const p2=n=>String(n).padStart(2,'0');
+  const cab=['Mês/ano','Devido (R$)','Competência','Coef. de correção','Principal corrigido (R$)','Juros até 12/2021 (R$)','SELIC acum.','Juros SELIC (R$)','Taxa legal acum.','Juros taxa legal (R$)','Total atualizado (R$)'];
+  const sub=['','','','','','','',(P.perfil==='REP'?'mais 1%':P.perfil==='NAO'?'pós-citação a 08/2024':'12/2021 a 08/2025'),'',(P.perfil==='REP'?'não se aplica':mLbl(P.tlIni)+' a '+mLbl(P.tlFim)),''];
+  const termo=P.cfg.cit?mLbl(P.cit):(P.citJ?mLbl(P.citJ):'não informado');
+  const info=[['Perfil',cfg.nome],['Data-base',d],['Termo inicial dos juros de mora',cfg.jAte||cfg.cit?termo:'—'],['Última competência de índices aplicada',mLbl(P.tlFim)],
+    ['Índices atualizados em',I.atualizado_em?I.atualizado_em.slice(0,10).split('-').reverse().join('/'):'—'],['Situação do perfil',cfg.status[1]],
+    ['Gerado em',p2(quando.getDate())+'/'+p2(quando.getMonth()+1)+'/'+quando.getFullYear()+' '+p2(quando.getHours())+':'+p2(quando.getMinutes())]];
+  const S=ultimo.S;
+  const resumo=[['Valor devido (nominal)',S.valor],['Principal corrigido',S.princ]]; if(cfg.jAte) resumo.push(['Juros até 12/2021',S.jAte]); resumo.push([cfg.selLbl,S.jSel],[cfg.tlLbl,S.jTl],['TOTAL ATUALIZADO EM '+d,S.total]);
+  const linhas=ultimo.rows.map(r=>({lbl:r.lbl,valor:r.valor,comp:r.comp,coef:r.coef,princ:r.princ,jAte:r.jAte,sel:r.sel,jSel:r.jSel,tl:r.tl,jTl:r.jTl,total:r.total}));
+  const fund=cfg.fund.map(x=>x.replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' '));
+  return {titulo:'Liquidação – Manual de Cálculos da Justiça Federal (ed. 2026, Res. CJF 990/2026)',info,cab,sub,linhas,total:S,resumo,fund,nome:'liquidacao_'+P.perfil+'_'+P.base};
+}
+function montaXlsx(D){
+  const enc=new TextEncoder(); const L=[]; // L: linhas de células [[{v,s}]]
+  const t=(v,s=0)=>({v,s}); const n=(v,s)=>({v,s,n:1});
+  L.push([t(D.titulo,8)]); for(const [k,v] of D.info) L.push([t(k,1),t(v,9)]); L.push([]);
+  const ih=L.length+1; L.push(D.cab.map(c=>t(c,7)));
+  if(D.sub.some(x=>x)) L.push(D.sub.map(c=>t(c,10)));
+  for(const r of D.linhas){ const [y,m]=r.comp.split('-').map(Number);
+    L.push([t(r.lbl),n(r.valor,2),n(_serie(y,m),6),n(r.coef,3),n(r.princ,2),n(r.jAte,2),n(r.sel,4),n(r.jSel,2),n(r.tl,5),n(r.jTl,2),n(r.total,2)]); }
+  const S=D.total; L.push([t('Total',1),n(S.valor,11),t(''),t(''),n(S.princ,11),n(S.jAte,11),t(''),n(S.jSel,11),t(''),n(S.jTl,11),n(S.total,11)]); L.push([]);
+  L.push([t('RESUMO',1)]); for(const [k,v] of D.resumo) L.push([t(k,1),n(v,2)]);
+  const sheet=(linhas,larg)=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0" showGridLines="0"/></sheetViews><cols>'+larg.map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('')+'</cols><sheetData>'+
+    linhas.map((r,i)=>'<row r="'+(i+1)+'">'+r.map((c,j)=>{ if(c.v===''||c.v==null) return ''; const ref=_col(j+1)+(i+1);
+      return c.n?'<c r="'+ref+'" s="'+c.s+'"><v>'+c.v+'</v></c>':'<c r="'+ref+'" s="'+c.s+'" t="inlineStr"><is><t xml:space="preserve">'+_esc(c.v)+'</t></is></c>'; }).join('')+'</row>').join('')+'</sheetData></worksheet>';
+  const f2=[[t('Fundamentos aplicados',8)]]; D.fund.forEach((x,i)=>f2.push([t(x,9)]));
+  const ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>';
+  const rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+  const wb='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Cálculo" sheetId="1" r:id="rId1"/><sheet name="Fundamentos" sheetId="2" r:id="rId2"/></sheets></workbook>';
+  const wbr='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+  const st='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="4"><numFmt numFmtId="164" formatCode="mm/yyyy"/><numFmt numFmtId="165" formatCode="0.0000000000"/><numFmt numFmtId="166" formatCode="0.000000%"/><numFmt numFmtId="167" formatCode="#,##0.00"/></numFmts>'+
+    '<fonts count="3"><font><sz val="10"/><name val="Calibri"/></font><font><b/><sz val="10"/><name val="Calibri"/></font><font><b/><sz val="13"/><name val="Calibri"/></font></fonts>'+
+    '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8EEF3"/></patternFill></fill></fills>'+
+    '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left/><right/><top style="thin"/><bottom/><diagonal/></border></borders>'+
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="12">'+
+    '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'+
+    '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'+
+    '<xf numFmtId="167" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'+
+    '<xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'+
+    '<xf numFmtId="10" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'+
+    '<xf numFmtId="166" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'+
+    '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"><alignment horizontal="center"/></xf>'+
+    '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'+
+    '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>'+
+    '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"><alignment vertical="top"/></xf>'+
+    '<xf numFmtId="0" fontId="0" fillId="2" borderId="0" xfId="0" applyFill="1"><alignment horizontal="center"/></xf>'+
+    '<xf numFmtId="167" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyNumberFormat="1" applyBorder="1"/></cellXfs></styleSheet>';
+  return _zip([{nome:'[Content_Types].xml',dados:enc.encode(ct)},{nome:'_rels/.rels',dados:enc.encode(rels)},{nome:'xl/workbook.xml',dados:enc.encode(wb)},{nome:'xl/_rels/workbook.xml.rels',dados:enc.encode(wbr)},{nome:'xl/styles.xml',dados:enc.encode(st)},
+    {nome:'xl/worksheets/sheet1.xml',dados:enc.encode(sheet(L,[26,14,12,16,16,14,12,14,14,14,16]))},{nome:'xl/worksheets/sheet2.xml',dados:enc.encode(sheet(f2,[160]))}]);
+}
+function montaPdf(D){
+  const W=842,H=595,M=28; const larg=[48,62,44,68,66,54,52,62,62,62,70]; const tw=larg.reduce((a,b)=>a+b,0); const esc=larg.map(x=>x*(W-2*M)/tw);
+  const wch=(c,s,neg)=>{ if('0123456789'.includes(c)) return .556*s; if(',.'.includes(c)) return .278*s; if(c==='%') return .889*s; if(c==='-') return .333*s; if(c==='/'||c===' ') return .278*s; return (neg?.58:.5)*s; };
+  const tl=(txt,s,neg)=>[...txt].reduce((a,c)=>a+wch(c,s,neg),0);
+  const lat=s=>{ s=String(s).replace(/[–—−]/g,'-').replace(/[“”]/g,'"').replace(/[‘’]/g,"'").replace(/≤/g,'<=').replace(/≥/g,'>=').replace(/→/g,'->'); return [...s].map(c=>c.charCodeAt(0)<256?c:'?').join('').replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); };
+  const paginas=[]; let ops=[]; let y=0;
+  const txt=(x,yy,s,t,f)=>ops.push('BT /'+(f||'F1')+' '+t+' Tf '+x.toFixed(2)+' '+yy.toFixed(2)+' Td ('+lat(s)+') Tj ET');
+  const txtD=(xd,yy,s,t,f)=>txt(xd-tl(String(s),t,f==='F2'),yy,s,t,f);
+  const linha=(x1,y1,x2,y2,w)=>ops.push((w||.5)+' w '+x1.toFixed(2)+' '+y1.toFixed(2)+' m '+x2.toFixed(2)+' '+y2.toFixed(2)+' l S');
+  const fundo=(x,yy,w,h,g)=>ops.push(g+' g '+x.toFixed(2)+' '+yy.toFixed(2)+' '+w.toFixed(2)+' '+h.toFixed(2)+' re f 0 g');
+  const nova=()=>{ if(ops.length) paginas.push(ops); ops=[]; y=H-M; };
+  const quebra=(s,t,maxW)=>{ const pal=String(s).split(/\s+/); const out=[]; let cur=''; for(const p of pal){ const tent=cur?cur+' '+p:p; if(tl(tent,t)>maxW&&cur){out.push(cur);cur=p;} else cur=tent; } if(cur) out.push(cur); return out; };
+  const fmt=v=>v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const pc=(v,d)=>(v*100).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d})+'%';
+  const cabTab=()=>{ const h=26; fundo(M,y-h,W-2*M,h,.91); let x=M; const nomes=[['Mês/ano',''],['Devido',''],['Compet.',''],['Coef. de','correção'],['Principal','corrigido'],['Juros até','12/2021'],['SELIC acum.',D.sub[7]],['Juros','SELIC'],['Taxa legal acum.',D.sub[9]],['Juros','taxa legal'],['Total','atualizado']];
+    nomes.forEach((nm,i)=>{ const dir=i>0; const xd=dir?x+esc[i]-3:x+3; const f=(s,yy,t,fn)=>dir?txtD(xd,yy,s,t,fn):txt(xd,yy,s,t,fn);
+      if(nm[1]){ f(nm[0],y-10,6.6,'F2'); f(nm[1],y-20,6,'F1'); } else f(nm[0],y-16,6.6,'F2'); x+=esc[i]; }); linha(M,y-h,W-M,y-h,.7); y-=h; };
+  nova(); txt(M,y-12,D.titulo,12,'F2'); y-=22;
+  for(const [k,v] of D.info){ const ls=quebra(v,8,W-2*M-150); txt(M,y-8,k,8,'F2'); ls.forEach((l,i)=>txt(M+150,y-8-i*10,l,8)); y-=Math.max(1,ls.length)*10+1; }
+  y-=8; cabTab(); const RH=11.2;
+  const num=(r)=>[r.lbl,fmt(r.valor),mLbl(r.comp),r.coef.toFixed(10).replace('.',','),fmt(r.princ),fmt(r.jAte),pc(r.sel,2),fmt(r.jSel),pc(r.tl,6),fmt(r.jTl),fmt(r.total)];
+  for(const r of D.linhas){ if(y-RH<M+16){ nova(); cabTab(); } let x=M; num(r).forEach((c,i)=>{ if(i===0) txt(x+3,y-8.5,c,7); else txtD(x+esc[i]-3,y-8.5,c,7); x+=esc[i]; }); linha(M,y-RH,W-M,y-RH,.2); y-=RH; }
+  if(y-RH*2<M+16){ nova(); cabTab(); } { let x=M; const S=D.total; const tot=['Total',fmt(S.valor),'','',fmt(S.princ),fmt(S.jAte),'',fmt(S.jSel),'',fmt(S.jTl),fmt(S.total)]; fundo(M,y-RH,W-2*M,RH,.91);
+    tot.forEach((c,i)=>{ if(c){ if(i===0) txt(x+3,y-8.5,c,7,'F2'); else txtD(x+esc[i]-3,y-8.5,c,7,'F2'); } x+=esc[i]; }); linha(M,y-RH,W-M,y-RH,.7); y-=RH+10; }
+  const bloco=(titulo,itens,tipo)=>{ const alt=12+itens.reduce((a,it)=>a+(tipo==='kv'?11:quebra(it,7.5,W-2*M).length*9.5+2),0); if(y-alt<M+16) nova(); txt(M,y-9,titulo,9,'F2'); y-=14;
+    for(const it of itens){ if(tipo==='kv'){ const b=it[0].startsWith('TOTAL'); txt(M,y-8,it[0],8,b?'F2':'F1'); txtD(M+330,y-8,fmt(it[1]),8,b?'F2':'F1'); y-=11; } else { for(const l of quebra(it,7.5,W-2*M)){ txt(M,y-7.5,l,7.5); y-=9.5; } y-=2; } } y-=6; };
+  bloco('RESUMO (R$)',D.resumo,'kv'); bloco('FUNDAMENTOS APLICADOS',D.fund,'txt'); nova(); const pag=paginas.length;
+  paginas.forEach((p,i)=>p.push('BT /F1 7 Tf '+M+' 16 Td (Pagina '+(i+1)+' de '+pag+' - Calculo conforme o Manual de Calculos da Justica Federal (ed. 2026); confira os dados antes de usar em peca.) Tj ET'));
+  const objs=[]; const add=s=>{objs.push(s);return objs.length;}; add('<< /Type /Catalog /Pages 2 0 R >>'); add(''); add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>'); add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  const kids=[]; for(const p of paginas){ const c=p.join('\n'); const cid=add('<< /Length '+c.length+' >>\nstream\n'+c+'\nendstream'); const pid=add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+W+' '+H+'] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents '+cid+' 0 R >>'); kids.push(pid+' 0 R'); }
+  objs[1]='<< /Type /Pages /Kids ['+kids.join(' ')+'] /Count '+kids.length+' >>';
+  let out='%PDF-1.4\n'; const offs=[]; objs.forEach((o,i)=>{ offs.push(out.length); out+=(i+1)+' 0 obj\n'+o+'\nendobj\n'; }); const xr=out.length;
+  out+='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n'+offs.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('')+'trailer\n<< /Size '+(objs.length+1)+' /Root 1 0 R >>\nstartxref\n'+xr+'\n%%EOF'; 
+  const bytes=new Uint8Array(out.length); for(let i=0;i<out.length;i++) bytes[i]=out.charCodeAt(i)&255; return bytes;
+}
+function baixar(bytes,nome,tipo){ const url=URL.createObjectURL(new Blob([bytes],{type:tipo})); const a=document.createElement('a'); a.href=url; a.download=nome; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1500); }
+function exportar(formato){ const D=dadosExport(); if(!D){ $('cpMsg').textContent='Calcule primeiro: não há resultado para exportar.'; return; }
+  try{ if(formato==='xlsx') baixar(montaXlsx(D),D.nome+'.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); else baixar(montaPdf(D),D.nome+'.pdf','application/pdf'); $('cpMsg').textContent='Arquivo gerado ('+(formato==='xlsx'?'Excel':'PDF')+'). Se o download não iniciar, abra o site em https://iermack.github.io/liquidacao/.'; }
+  catch(e){ $('cpMsg').textContent='Não foi possível gerar o arquivo: '+e.message; } }
+$('exXlsx').onclick=()=>exportar('xlsx'); $('exPdf').onclick=()=>exportar('pdf');
+
 $('calc').onclick=render;
 ['pBase','pCit','pIpcaeFim','pSelIni','pSelFim','pTlIni','pJuros'].forEach(i=>$(i).addEventListener('input',render));
 $('parc').addEventListener('input',()=>{$('exTag').hidden=true;render();});
