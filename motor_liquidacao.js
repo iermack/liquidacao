@@ -17,7 +17,7 @@
   else raiz.MotorLiquidacao = fabrica();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
-  const VERSAO = '2026.11.12-3'; // muda a cada alteração de regra; guarde junto com o resultado
+  const VERSAO = '2026.11.12-4'; // muda a cada alteração de regra; guarde junto com o resultado
 
   /* ---------- perfis e regras (Manual 2026) ---------- */
   const PERFIS = {
@@ -157,6 +157,10 @@
     });
     return { parcelas, erros, notas };
   }
+  function dataBasePadrao(hoje) { // último dia do mês de 'hoje' (Date), no formato AAAA-MM-DD
+    const h = hoje || new Date(), u = new Date(h.getFullYear(), h.getMonth() + 1, 0), p = n => String(n).padStart(2, '0');
+    return u.getFullYear() + '-' + p(u.getMonth() + 1) + '-' + p(u.getDate());
+  }
   const arredonda = (v, n = 2) => Math.round(v * Math.pow(10, n) + (v >= 0 ? 1e-9 : -1e-9)) / Math.pow(10, n);
 
   async function carregarIndices(url) {
@@ -167,5 +171,5 @@
     return j;
   }
 
-  return { VERSAO, PERFIS, calcular, lerParcelas, lerCompetencia, carregarIndices, arredonda, util: { mAdd, mRange, mLbl, fator, somaSelic, somaTaxaLegal, jurosPoupanca, taxaPoupanca } };
+  return { VERSAO, PERFIS, calcular, lerParcelas, lerCompetencia, dataBasePadrao, carregarIndices, arredonda, util: { mAdd, mRange, mLbl, fator, somaSelic, somaTaxaLegal, jurosPoupanca, taxaPoupanca } };
 });

@@ -82,7 +82,7 @@ input:disabled{opacity:.75;cursor:not-allowed;background:var(--head)}
 <div class="blkh"><span class="tag tag-user">Você informa</span><span class="note">Estes campos mudam a cada cálculo. As parcelas são informadas na caixa logo abaixo.</span></div>
 <div class="grid">
 <label>Perfil de cálculo<select id="perfil"><option value="FAZ">Fazenda Pública (inclui servidores)</option><option value="NAO">Devedor não enquadrado como Fazenda Pública</option><option value="PREV">Benefício previdenciário</option><option value="DES">Desapropriações diretas</option><option value="REP">Repetição de indébito tributário</option></select></label>
-<label>Data-base do cálculo<input type="date" id="pBase" value="2026-11-30"></label>
+<label>Data-base do cálculo (sugerida: último dia do mês corrente)<input type="date" id="pBase" value="2026-11-30"></label>
 <label id="lblCit" hidden>Mês da citação (início dos juros)<input type="month" id="pCit" value="2023-01"></label>
 <label id="lblCitJ">Início dos juros de mora (mês da citação ou outro termo inicial)<input type="month" id="pCitJ" value=""></label>
 <label id="lblJuros">Juros de mora até 12/2021 (%), se não informar o início<input type="text" id="pJuros" value="0" inputmode="decimal"></label>
@@ -123,6 +123,7 @@ input:disabled{opacity:.75;cursor:not-allowed;background:var(--head)}
 
 <section class="panel">
 <h2>Memória de cálculo</h2>
+<p class="note" style="margin:0 0 8px">Os percentuais de SELIC e de taxa legal são o total acumulado do período de incidência. Parcelas anteriores ao início do período recebem o mesmo percentual (como no 2.º exemplo do Manual, item 4.2.1.1, Nota 6); parcelas posteriores contam a partir da própria competência.</p>
 <div class="tw"><table id="tb"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
 </section>
 
@@ -277,7 +278,8 @@ function render(){
   const P=params(); $('pTlFim').value=mLbl(P.tlFim); if(P.cfg.cit){ $('pIpcaeFim').value=P.cit; $('pSelIni').value=P.selIni; } if(P.perfil==='REP') $('pSelFim').value=P.tlFim; regraAviso();
   const {res,err,notas}=parseParcelas($('parc').value); $('parcNote').textContent=notas.join('. ')+(notas.length?'. Para outra competência, informe-a na 3.ª coluna.':'');
   const tb=$('tb'); const head=tb.tHead, body=tb.tBodies[0], foot=tb.tFoot;
-  head.innerHTML='<tr>'+['Mês/ano','Devido','Competência','Coef. correção','Principal corrigido','Juros até 12/2021','SELIC acum.','Juros SELIC','Taxa legal acum.','Juros taxa legal','Total atualizado'].map(h=>'<th>'+h+'</th>').join('')+'</tr>';
+  const hSel=P.perfil==='REP'?'SELIC acum. + 1%':P.perfil==='NAO'?'SELIC acum. (pós-citação a 08/2024)':'SELIC acum. (12/2021 a 08/2025)'; const hTl=P.perfil==='REP'?'Taxa legal (não se aplica)':'Taxa legal acum. (de '+mLbl(P.tlIni)+' a '+mLbl(P.tlFim)+')';
+  head.innerHTML='<tr>'+['Mês/ano','Devido','Competência','Coef. correção','Principal corrigido','Juros até 12/2021',hSel,'Juros SELIC',hTl,'Juros taxa legal','Total atualizado'].map(h=>'<th>'+h+'</th>').join('')+'</tr>';
   body.innerHTML=''; foot.innerHTML=''; $('kv').innerHTML='';
   if(P.cfg.cit&&!P.cit){ $('tot').textContent='—'; $('totLbl').innerHTML='<span class="pill bad">Informe o mês da citação.</span>'; ultimo=null; return; }
   if(err.length||!res.length){ $('tot').textContent='—'; $('totLbl').innerHTML='<span class="pill bad">'+(err[0]||'Nenhuma parcela informada.')+'</span>'; ultimo=null; return; }
@@ -346,7 +348,8 @@ $('cpTsv').onclick=()=>{ if(!ultimo) return; const hd=['Mês/ano','Devido','Comp
   const f=v=>String(v).replace('.',','); const L=[hd.join('\t')].concat(ultimo.rows.map(r=>[r.lbl,f(r.valor.toFixed(2)),mLbl(r.comp),f(r.coef.toFixed(10)),f(r.princ.toFixed(2)),f(r.jAte.toFixed(2)),f((r.sel*100).toFixed(4)),f(r.jSel.toFixed(2)),f((r.tl*100).toFixed(6)),f(r.jTl.toFixed(2)),f(r.total.toFixed(2))].join('\t')));
   const t=L.join('\n'); const ok=()=>{$('cpMsg').textContent='Copiado.';};
   (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(ok).catch(()=>{ $('parc').value=$('parc').value; $('cpMsg').textContent='Seu navegador bloqueou a cópia automática.'; }); };
-$('parc').value=exemploTxt(); aplicaPerfil(); idxBar(); conferencia(); render();
+$('parc').value=exemploTxt(); (function(){ const h=new Date(), u=new Date(h.getFullYear(),h.getMonth()+1,0); const p=n=>String(n).padStart(2,'0'); try{ $('pBase').value=u.getFullYear()+'-'+p(u.getMonth()+1)+'-'+p(u.getDate()); }catch(e){} })();
+aplicaPerfil(); idxBar(); conferencia(); render();
 </script>
 
 </body>
