@@ -17,7 +17,7 @@
   else raiz.MotorLiquidacao = fabrica();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
-  const VERSAO = '2026.11.12-1'; // muda a cada alteração de regra; guarde junto com o resultado
+  const VERSAO = '2026.11.12-2'; // muda a cada alteração de regra; guarde junto com o resultado
 
   /* ---------- perfis e regras (Manual 2026) ---------- */
   const PERFIS = {
@@ -128,9 +128,34 @@
     const soma = k => linhas.reduce((a, l) => a + l[k], 0);
     const totais = { valor: soma('valor'), principal: soma('principal'), jurosAte2021: soma('jurosAte2021'), jurosSelic: soma('jurosSelic'), jurosTaxaLegal: soma('jurosTaxaLegal'), total: soma('total') };
     const avisos = [];
+    const futuras = linhas.filter(l => l.competencia > P.ultima).map(l => l.rotulo);
+    if (futuras.length) avisos.push('Parcela(s) com competência posterior ao mês anterior à data-base (' + futuras.join(', ') + '): sem correção nem juros.');
     if (P.cfg.calibracao !== 'calibrado') avisos.push('Perfil ' + P.perfil + ': ' + P.cfg.calibracao + '. Confira com o Manual e com a tabela SICOM antes de usar em peça.');
     if (P.perfil === 'DES') avisos.push('Desapropriações: juros compensatórios e juros moratórios anteriores a dez/2021 não são calculados (informe jurosAte2021).');
     return { versaoMotor: VERSAO, indicesAtualizadosEm: (indices.atualizado_em || null), perfil: { codigo: opcoes.perfil, nome: P.cfg.nome, item: P.cfg.item }, parametros: P, linhas, totais, avisos };
+  }
+  const MESES_NOME={jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12};
+  function lerCompetencia(txt){ // devolve {comp:'AAAA-MM', nota?} ou null
+  let s=String(txt||'').trim(); if(!s) return null;
+  const sem=s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); let m;
+  if((m=/^13\s*[.ºo°]*\s*[\/\-\s]?\s*(?:sal\w*\s*)?[\/\-\s]?\s*(\d{4})\b/.exec(sem))) return {comp:m[1]+'-12',nota:'13.º/'+m[1]+' tratado como competência 12/'+m[1]};
+  if((m=/(\d{1,2})\s*\/\s*(\d{4})\b/.exec(sem))&&+m[1]>=1&&+m[1]<=12) return {comp:m[2]+'-'+m[1].padStart(2,'0')};
+  if((m=/\b(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-z]*[\s\/\-\.]*(\d{2}|\d{4})\b/.exec(sem))){ const y=m[2].length===2?2000+(+m[2]):+m[2]; return {comp:y+'-'+String(MESES_NOME[m[1]]).padStart(2,'0')}; }
+  if((m=/^(\d{1,2})\s*[\/\-\.]\s*(\d{2})$/.exec(sem))&&+m[1]>=1&&+m[1]<=12) return {comp:(2000+(+m[2]))+'-'+m[1].padStart(2,'0')};
+  return null;
+}
+
+  function lerParcelas(texto) { // texto colado do Excel -> {parcelas, erros, notas}
+    const parcelas = [], erros = [], notas = [];
+    String(texto || '').split(/\r?\n/).forEach((ln, i) => {
+      if (!ln.trim()) return; const c = ln.split(/\t|;/).map(x => x.trim());
+      let v = c[1] === undefined ? NaN : String(c[1]).replace(/R\$\s*/, '').trim(); if (typeof v === 'string') v = v.includes(',') ? v.replace(/\./g, '').replace(',', '.') : v; v = Number(v);
+      let r = lerCompetencia(c[0]); if (c[2]) { const r2 = lerCompetencia(c[2]); if (r2) r = r2; }
+      if (isNaN(v) || !r) { erros.push('Linha ' + (i + 1) + ': informe valor e competência (MM/AAAA, mmm/aa ou 13.º/AAAA). Não inclua a linha de títulos.'); return; }
+      if (r.nota && !notas.includes(r.nota)) notas.push(r.nota);
+      parcelas.push({ rotulo: c[0], valor: v, competencia: r.comp });
+    });
+    return { parcelas, erros, notas };
   }
   const arredonda = (v, n = 2) => Math.round(v * Math.pow(10, n) + (v >= 0 ? 1e-9 : -1e-9)) / Math.pow(10, n);
 
@@ -142,5 +167,5 @@
     return j;
   }
 
-  return { VERSAO, PERFIS, calcular, carregarIndices, arredonda, util: { mAdd, mRange, mLbl, fator, somaSelic, somaTaxaLegal, jurosPoupanca, taxaPoupanca } };
+  return { VERSAO, PERFIS, calcular, lerParcelas, lerCompetencia, carregarIndices, arredonda, util: { mAdd, mRange, mLbl, fator, somaSelic, somaTaxaLegal, jurosPoupanca, taxaPoupanca } };
 });
