@@ -14,7 +14,7 @@ html{color-scheme:light dark}body{margin:0}[hidden]{display:none!important}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10171d;--panel:#18222b;--fg:#e4ebf1;--mut:#9aabba;--line:#2c3a46;--accent:#5bb6d6;--accent-fg:#06222d;--ok:#6fd49b;--okbg:#14301f;--warn:#f0b35a;--warnbg:#38290f;--bad:#ff8a80;--badbg:#3b1815;--head:#202d38;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#10171d;--panel:#18222b;--fg:#e4ebf1;--mut:#9aabba;--line:#2c3a46;--accent:#5bb6d6;--accent-fg:#06222d;--ok:#6fd49b;--okbg:#14301f;--warn:#f0b35a;--warnbg:#38290f;--bad:#ff8a80;--badbg:#3b1815;--head:#202d38;color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--sans);padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.wrap{max-width:1480px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 h1{font-size:22px;margin:0;font-weight:600;text-wrap:balance}
 h2{font-size:13px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);font-weight:600}
 .sub{color:var(--mut);margin:2px 0 0}
@@ -34,9 +34,10 @@ button.sec{background:transparent;color:var(--accent);border:1px solid var(--acc
 .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:13px}
 .kv span:nth-child(odd){color:var(--mut)} .kv span:nth-child(even){text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
 .tw{overflow-x:auto;border:1px solid var(--line);border-radius:4px}
-table{border-collapse:collapse;width:100%;font-size:12.5px;font-variant-numeric:tabular-nums}
-th{background:var(--head);text-align:right;font-weight:600;padding:6px 8px;white-space:nowrap;position:sticky;top:0}
-td{padding:4px 8px;text-align:right;border-top:1px solid var(--line);white-space:nowrap;font-family:var(--mono)}
+table{border-collapse:collapse;width:100%;font-size:12px;font-variant-numeric:tabular-nums}
+th{background:var(--head);text-align:right;font-weight:600;padding:6px 6px;white-space:normal;line-height:1.25;vertical-align:bottom;position:sticky;top:0}
+th small{display:block;font-weight:400;color:var(--mut);font-size:10.5px;white-space:nowrap}
+td{padding:4px 6px;text-align:right;border-top:1px solid var(--line);white-space:nowrap;font-family:var(--mono);font-size:12px}
 th:first-child,td:first-child{text-align:left}
 tfoot td{font-weight:600;background:var(--head)}
 .pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:500}
@@ -278,8 +279,8 @@ function render(){
   const P=params(); $('pTlFim').value=mLbl(P.tlFim); if(P.cfg.cit){ $('pIpcaeFim').value=P.cit; $('pSelIni').value=P.selIni; } if(P.perfil==='REP') $('pSelFim').value=P.tlFim; regraAviso();
   const {res,err,notas}=parseParcelas($('parc').value); $('parcNote').textContent=notas.join('. ')+(notas.length?'. Para outra competência, informe-a na 3.ª coluna.':'');
   const tb=$('tb'); const head=tb.tHead, body=tb.tBodies[0], foot=tb.tFoot;
-  const hSel=P.perfil==='REP'?'SELIC acum. + 1%':P.perfil==='NAO'?'SELIC acum. (pós-citação a 08/2024)':'SELIC acum. (12/2021 a 08/2025)'; const hTl=P.perfil==='REP'?'Taxa legal (não se aplica)':'Taxa legal acum. (de '+mLbl(P.tlIni)+' a '+mLbl(P.tlFim)+')';
-  head.innerHTML='<tr>'+['Mês/ano','Devido','Competência','Coef. correção','Principal corrigido','Juros até 12/2021',hSel,'Juros SELIC',hTl,'Juros taxa legal','Total atualizado'].map(h=>'<th>'+h+'</th>').join('')+'</tr>';
+  const hSel=P.perfil==='REP'?'SELIC acum.<small>mais 1%</small>':P.perfil==='NAO'?'SELIC acum.<small>pós-citação a 08/2024</small>':'SELIC acum.<small>12/2021 a 08/2025</small>'; const hTl=P.perfil==='REP'?'Taxa legal<small>não se aplica</small>':'Taxa legal acum.<small>'+mLbl(P.tlIni)+' a '+mLbl(P.tlFim)+'</small>';
+  head.innerHTML='<tr>'+['Mês/ano','Devido','Compet.','Coef. de<br>correção','Principal<br>corrigido','Juros até<br>12/2021',hSel,'Juros<br>SELIC',hTl,'Juros<br>taxa legal','Total<br>atualizado'].map(h=>'<th>'+h+'</th>').join('')+'</tr>';
   body.innerHTML=''; foot.innerHTML=''; $('kv').innerHTML='';
   if(P.cfg.cit&&!P.cit){ $('tot').textContent='—'; $('totLbl').innerHTML='<span class="pill bad">Informe o mês da citação.</span>'; ultimo=null; return; }
   if(err.length||!res.length){ $('tot').textContent='—'; $('totLbl').innerHTML='<span class="pill bad">'+(err[0]||'Nenhuma parcela informada.')+'</span>'; ultimo=null; return; }
