@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwYjVjN2EiLz48cmVjdCB4PSIxMyIgeT0iMTEiIHdpZHRoPSIzOCIgaGVpZ2h0PSIxMyIgcng9IjMiIGZpbGw9IiNlOGY0ZjgiLz48ZyBmaWxsPSIjZmZmZmZmIj48cmVjdCB4PSIxMyIgeT0iMzAiIHdpZHRoPSIxMCIgaGVpZ2h0PSI5IiByeD0iMiIvPjxyZWN0IHg9IjI3IiB5PSIzMCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjkiIHJ4PSIyIi8+PHJlY3QgeD0iNDEiIHk9IjMwIiB3aWR0aD0iMTAiIGhlaWdodD0iOSIgcng9IjIiLz48cmVjdCB4PSIxMyIgeT0iNDMiIHdpZHRoPSIxMCIgaGVpZ2h0PSI5IiByeD0iMiIvPjxyZWN0IHg9IjI3IiB5PSI0MyIgd2lkdGg9IjEwIiBoZWlnaHQ9IjkiIHJ4PSIyIi8+PC9nPjxyZWN0IHg9IjQxIiB5PSI0MyIgd2lkdGg9IjEwIiBoZWlnaHQ9IjkiIHJ4PSIyIiBmaWxsPSIjZjJiMTM0Ii8+PC9zdmc+Cg==">
+<link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAACVElEQVR4nOyXS2gTURSG/3s7SUhq8QXioyKlPlCpBIpQFyqKtejOVSW1WkWwK0FwIVkVhOBGBFdZiAg1pW5cCVaLC1sEUSzBGqhSqVAfKFQj6NjJjLmeMzjV4EwlTTqzybc69/yT+5+5c+dmjoa/6elbFjONcxS1CYE4IFahKqhPSiFLwWM9FLmCG315RxFOEOtKHqILrwkh1mIRUUq9J9vTeiZ1d66A+kSyAxJD8BFakcNchEDiwvKYlDmqZA18hFdCL0RatKgQJ/w2Z/hRR8PGcU3ShvO6aM/2ZsSbGlEJ2am3GMm9dtXYW1MQbcJFbI9vQbq3E9WgN30Lw9mX/+TZW9LrtsHtR1sbV6NaeM3F3hIBUyvAs4D72Ql8+PIVlcJz8FxeiPpjSYUAqe0BzUto37EZmbMJxCIhe6wbJrquDmD4+asFa254rsDOjevnJmE45lwlWlkF+IXnI/g+a3jmFqqVVcDNkTH+y6QlDNtj3SjYuUo0NwI/BzxXYOWSGLr3tpbcSf/DZ5j5ps+rrQgXcLTpHaJa0dZ+WBKDU+vwuRAur4AzB3cheWR/SY4NU7cfzKud3DSN89tKP0C4mMu5Zlef2kko6bvoo5vwdHLaPsUcOObc/7SxmaXQrT/3xTHnXCFvQQ3JEL01HQgA6g3uSSXslikQ2Fsqq5imOA//ybO3nB289KaoxCn4jCqKHvau44E1PjoRatn9hNL76BhtwCLyuznt1AdSd3hc5wjm+Oik2XrgeuinVaChQRuzgU9qVAW7PX9EQYba826z/+ILR/kFAAD///DCv38AAAAGSURBVAMARAUR68Defg8AAAAASUVORK5CYII=">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<meta name="theme-color" content="#0b5c7a">
 <title>Liquidação Fazenda</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -112,7 +116,7 @@ input:disabled{opacity:.75;cursor:not-allowed;background:var(--head)}
 <h2><span class="tag tag-user">Você informa</span> Parcelas <span class="ex" id="exTag">exemplo fictício</span></h2>
 <textarea id="parc" spellcheck="false" aria-label="Parcelas"></textarea>
 <p class="note" id="parcNote" role="status"></p>
-<p class="note">Cole do Excel: uma parcela por linha, sem a linha de títulos. Colunas: competência (<code>03/2021</code>, <code>mar/21</code>, <code>março/2021</code> ou <code>01/03/2021</code>) e valor devido. Se o rótulo não for uma competência, use 3 colunas: rótulo, valor e competência (ex.: <code>Férias/2021 ⇥ 446,35 ⇥ 12/2021</code>). Rótulos <code>13.º/AAAA</code> valem competência 12/AAAA.</p>
+<p class="note">Cole do Excel: uma parcela por linha, sem a linha de títulos. Colunas: competência (<code>03/2021</code>, <code>03-2021</code>, <code>mar/21</code>, <code>março/2021</code> ou <code>01/03/2021</code>) e valor devido, separados por tabulação (colar do Excel) ou por espaço. Linhas sem competência (ex.: <code>Férias/21</code>) usam a competência da linha anterior. Se o rótulo não for uma competência, use 3 colunas: rótulo, valor e competência (ex.: <code>Férias/2021 ⇥ 446,35 ⇥ 12/2021</code>). Rótulos <code>13.º/AAAA</code> valem competência 12/AAAA.</p>
 <div class="row"><button id="calc">Calcular</button><button class="sec" id="exemplo">Recarregar exemplo</button></div>
 </section>
 <section class="panel" id="resumo">
@@ -234,21 +238,29 @@ function parseNum(s){ s=String(s).trim().replace(/R\$\s*/,''); if(!s) return NaN
 const MESES_NOME={jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12};
 function lerCompetencia(txt){ // devolve {comp:'AAAA-MM', nota?} ou null
   let s=String(txt||'').trim(); if(!s) return null;
-  const sem=s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); let m;
+  const sem=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); let m;
   if((m=/^13\s*[.ºo°]*\s*[\/\-\s]?\s*(?:sal\w*\s*)?[\/\-\s]?\s*(\d{4})\b/.exec(sem))) return {comp:m[1]+'-12',nota:'13.º/'+m[1]+' tratado como competência 12/'+m[1]};
-  if((m=/(\d{1,2})\s*\/\s*(\d{4})\b/.exec(sem))&&+m[1]>=1&&+m[1]<=12) return {comp:m[2]+'-'+m[1].padStart(2,'0')};
+  if((m=/^(\d{4})\s*[-\/.]\s*(\d{1,2})(?:\D|$)/.exec(sem))&&+m[2]>=1&&+m[2]<=12) return {comp:m[1]+'-'+m[2].padStart(2,'0')};
+  if((m=/(\d{1,2})\s*[\/\-.]\s*(\d{4})\b/.exec(sem))&&+m[1]>=1&&+m[1]<=12) return {comp:m[2]+'-'+m[1].padStart(2,'0')};
   if((m=/\b(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-z]*[\s\/\-\.]*(\d{2}|\d{4})\b/.exec(sem))){ const y=m[2].length===2?2000+(+m[2]):+m[2]; return {comp:y+'-'+String(MESES_NOME[m[1]]).padStart(2,'0')}; }
   if((m=/^(\d{1,2})\s*[\/\-\.]\s*(\d{2})$/.exec(sem))&&+m[1]>=1&&+m[1]<=12) return {comp:(2000+(+m[2]))+'-'+m[1].padStart(2,'0')};
   return null;
 }
+const _ehNum=x=>/^-?(\d{1,3}(\.\d{3})*|\d+),\d+$|^-?\d+(\.\d+)?$/.test(x);
+function _celulas(ln){ let c=ln.split(/\t|;/).map(x=>x.trim()).filter(x=>x!==''); // colunas vazias do Excel são ignoradas
+  if(c.length===1){ const t=c[0].split(/\s+/); // sem tabulação: competência e valor separados por espaço
+    if(t.length>=3&&lerCompetencia(t[t.length-1])&&_ehNum(t[t.length-2])) c=[t.slice(0,-2).join(' '),t[t.length-2],t[t.length-1]];
+    else if(t.length>=2) c=[t.slice(0,-1).join(' '),t[t.length-1]]; }
+  return c; }
 function parseParcelas(txt){
-  const res=[],err=[],notas=[];
+  const res=[],err=[],notas=[]; let prev=null;
   txt.split(/\r?\n/).forEach((ln,i)=>{
-    if(!ln.trim()) return; const c=ln.split(/\t|;/).map(x=>x.trim()).filter(x=>x!==''); const val=parseNum(c[1]);
+    if(!ln.trim()) return; const c=_celulas(ln); const val=parseNum(c[1]);
     let r=lerCompetencia(c[0]); if(c[2]){ const r2=lerCompetencia(c[2]); if(r2) r=r2; }
+    if(!r&&!isNaN(val)&&prev) r={comp:prev,nota:c[0]+' usa a competência da linha anterior ('+mLbl(prev)+')'}; // ex.: Férias
     if(isNaN(val)||!r){ err.push('Linha '+(i+1)+': informe valor e competência (MM/AAAA, mmm/aa ou 13.º/AAAA). Não copie a linha de títulos.'); return; }
     if(r.nota&&!notas.includes(r.nota)) notas.push(r.nota);
-    res.push({lbl:c[0],valor:val,comp:r.comp});
+    prev=r.comp; res.push({lbl:c[0],valor:val,comp:r.comp});
   });
   return {res,err,notas};
 }
@@ -367,13 +379,14 @@ function dadosExport(){
   const termo=P.cfg.cit?mLbl(P.cit):(P.citJ?mLbl(P.citJ):'não informado');
   const termoTxt=P.cfg.cit?mLbl(P.cit):(P.citJ?mLbl(P.citJ):'');
   const info=[['Perfil',cfg.nome],['Data-base',d]]; if((cfg.jAte||cfg.cit)&&termoTxt) info.push(['Termo inicial dos juros de mora',termoTxt]);
+  const notaPeriodo='Os percentuais de SELIC e de taxa legal são o total acumulado no período de incidência, aplicado sobre o principal corrigido de cada parcela: parcelas anteriores ao início do período (SELIC: 12/2021; taxa legal: 09/2025) recebem o mesmo percentual, e as posteriores contam a partir da própria competência (Manual, item 4.2.1.1, Nota 6).';
   const indicesEm=I.atualizado_em?I.atualizado_em.slice(0,10).split('-').reverse().join('/'):'-';
   const infoTec=[['Última competência de índices aplicada',mLbl(P.tlFim)],['Índices atualizados em',indicesEm]];
   const S=ultimo.S;
   const resumo=[['Valor devido (nominal)',S.valor],['Principal corrigido',S.princ]]; if(cfg.jAte) resumo.push(['Juros até 12/2021',S.jAte]); resumo.push([cfg.selLbl,S.jSel],[cfg.tlLbl,S.jTl],['TOTAL ATUALIZADO EM '+d,S.total]);
   const linhas=ultimo.rows.map(r=>({lbl:r.lbl,valor:r.valor,comp:r.comp,coef:r.coef,princ:r.princ,jAte:r.jAte,sel:r.sel,jSel:r.jSel,tl:r.tl,jTl:r.jTl,total:r.total}));
   const fund=cfg.fund.map(x=>x.replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' '));
-  return {titulo:'Liquidação – Manual de Cálculos da Justiça Federal (ed. 2026, Res. CJF 990/2026)',info,infoTec,indicesEm,cab,sub,linhas,total:S,resumo,fund,nome:'liquidacao_'+P.perfil+'_'+P.base};
+  return {titulo:'Liquidação – Manual de Cálculos da Justiça Federal (ed. 2026, Res. CJF 990/2026)',info,infoTec,indicesEm,notaPeriodo,cab,sub,linhas,total:S,resumo,fund,nome:'liquidacao_'+P.perfil+'_'+P.base};
 }
 function montaXlsx(D){
   const enc=new TextEncoder(); const L=[]; // L: linhas de células [[{v,s}]]
@@ -384,7 +397,7 @@ function montaXlsx(D){
   for(const r of D.linhas){ const [y,m]=r.comp.split('-').map(Number);
     L.push([t(r.lbl),n(r.valor,2),n(_serie(y,m),6),n(r.coef,3),n(r.princ,2),n(r.jAte,2),n(r.sel,4),n(r.jSel,2),n(r.tl,5),n(r.jTl,2),n(r.total,2)]); }
   const S=D.total; L.push([t('Total',1),n(S.valor,11),t(''),t(''),n(S.princ,11),n(S.jAte,11),t(''),n(S.jSel,11),t(''),n(S.jTl,11),n(S.total,11)]); L.push([]);
-  L.push([t('RESUMO',1)]); for(const [k,v] of D.resumo) L.push([t(k,1),n(v,2)]);
+  L.push([t(D.notaPeriodo,9)]); L.push([]); L.push([t('RESUMO',1)]); for(const [k,v] of D.resumo) L.push([t(k,1),n(v,2)]);
   const sheet=(linhas,larg)=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0" showGridLines="0"/></sheetViews><cols>'+larg.map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('')+'</cols><sheetData>'+
     linhas.map((r,i)=>'<row r="'+(i+1)+'">'+r.map((c,j)=>{ if(c.v===''||c.v==null) return ''; const ref=_col(j+1)+(i+1);
       return c.n?'<c r="'+ref+'" s="'+c.s+'"><v>'+c.v+'</v></c>':'<c r="'+ref+'" s="'+c.s+'" t="inlineStr"><is><t xml:space="preserve">'+_esc(c.v)+'</t></is></c>'; }).join('')+'</row>').join('')+'</sheetData></worksheet>';
@@ -452,8 +465,9 @@ function montaPdf(D,ori){
   for(const [k,v] of D.info){ const ls=quebra(v,8,AV-150); txt(X0,y-8,k,8,'F2'); ls.forEach((l,i)=>txt(X0+150,y-8-i*10,l,8)); y-=Math.max(1,ls.length)*10+1; }
   y-=8; cabTab();
   const linhaTab=(cells,neg)=>{ if(y-RH<YB){ nova(); cabTab(); } if(neg) fundo(X0,y-RH,AV,RH,.91); let x=X0; cells.forEach((c,i)=>{ if(c){ if(i===0) txt(x+PAD,y-fs-0.6,c,fs,neg?'F2':'F1'); else txtD(x+esc[i]-PAD,y-fs-0.6,c,fs,neg?'F2':'F1'); } x+=esc[i]; }); linha(X0,y-RH,X1,y-RH,neg?.7:.2); y-=RH; };
-  linhasTxt.forEach(c=>linhaTab(c,false)); linhaTab(totL,true); y-=10;
-  const bloco=(titulo,itens,tipo)=>{ const alt=14+itens.reduce((a,it)=>a+(tipo==='kv'?11:quebra(it,7.5,AV).length*9.5+2),0); if(y-alt<YB&&alt<(YT-YB)) nova(); txt(X0,y-9,titulo,9,'F2'); y-=14;
+  linhasTxt.forEach(c=>linhaTab(c,false)); linhaTab(totL,true); y-=8;
+  { const nl=quebra(D.notaPeriodo,6.8,AV); if(y-nl.length*8.6<YB) nova(); nl.forEach(l=>{ txt(X0,y-6.8,l,6.8); y-=8.6; }); y-=8; }
+  const bloco=(titulo,itens,tipo)=>{ const alt=tipo==='kv'?14+itens.length*11:14+quebra(itens[0]||'',7.5,AV).length*9.5+2; if(y-alt<YB) nova(); txt(X0,y-9,titulo,9,'F2'); y-=14;
     for(const it of itens){ if(tipo==='kv'){ if(y-11<YB) nova(); const b=it[0].startsWith('TOTAL'); txt(X0,y-8,it[0],8,b?'F2':'F1'); txtD(X0+Math.min(330,AV),y-8,fmt(it[1]),8,b?'F2':'F1'); y-=11; } else { for(const l of quebra(it,7.5,AV)){ if(y-9.5<YB) nova(); txt(X0,y-7.5,l,7.5); y-=9.5; } y-=2; } } y-=6; };
   bloco('RESUMO (R$)',D.resumo,'kv'); bloco('FUNDAMENTOS APLICADOS',D.fund,'txt'); nova(); const pag=paginas.length;
   paginas.forEach((p,i)=>{ const fonte='Índices: PJe-Calc (TRT3), Banco Central e SICOM/CJF, atualizados em '+D.indicesEm+'. Cálculo conforme o Manual de Cálculos da Justiça Federal (ed. 2026).'; const pg='Página '+(i+1)+' de '+pag;

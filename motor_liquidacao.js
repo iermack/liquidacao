@@ -17,7 +17,7 @@
   else raiz.MotorLiquidacao = fabrica();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
-  const VERSAO = '2026.11.12-4'; // muda a cada alteração de regra; guarde junto com o resultado
+  const VERSAO = '2026.11.13-2'; // muda a cada alteração de regra; guarde junto com o resultado
 
   /* ---------- perfis e regras (Manual 2026) ---------- */
   const PERFIS = {
@@ -136,24 +136,32 @@
   }
   const MESES_NOME={jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12};
   function lerCompetencia(txt){ // devolve {comp:'AAAA-MM', nota?} ou null
-  let s=String(txt||'').trim(); if(!s) return null;
-  const sem=s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); let m;
-  if((m=/^13\s*[.ºo°]*\s*[\/\-\s]?\s*(?:sal\w*\s*)?[\/\-\s]?\s*(\d{4})\b/.exec(sem))) return {comp:m[1]+'-12',nota:'13.º/'+m[1]+' tratado como competência 12/'+m[1]};
-  if((m=/(\d{1,2})\s*\/\s*(\d{4})\b/.exec(sem))&&+m[1]>=1&&+m[1]<=12) return {comp:m[2]+'-'+m[1].padStart(2,'0')};
-  if((m=/\b(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-z]*[\s\/\-\.]*(\d{2}|\d{4})\b/.exec(sem))){ const y=m[2].length===2?2000+(+m[2]):+m[2]; return {comp:y+'-'+String(MESES_NOME[m[1]]).padStart(2,'0')}; }
-  if((m=/^(\d{1,2})\s*[\/\-\.]\s*(\d{2})$/.exec(sem))&&+m[1]>=1&&+m[1]<=12) return {comp:(2000+(+m[2]))+'-'+m[1].padStart(2,'0')};
-  return null;
-}
+    let s=String(txt||'').trim(); if(!s) return null;
+    const sem=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); let m;
+    if((m=/^13\s*[.ºo°]*\s*[\/\-\s]?\s*(?:sal\w*\s*)?[\/\-\s]?\s*(\d{4})\b/.exec(sem))) return {comp:m[1]+'-12',nota:'13.º/'+m[1]+' tratado como competência 12/'+m[1]};
+    if((m=/^(\d{4})\s*[-\/.]\s*(\d{1,2})(?:\D|$)/.exec(sem))&&+m[2]>=1&&+m[2]<=12) return {comp:m[1]+'-'+m[2].padStart(2,'0')};
+    if((m=/(\d{1,2})\s*[\/\-.]\s*(\d{4})\b/.exec(sem))&&+m[1]>=1&&+m[1]<=12) return {comp:m[2]+'-'+m[1].padStart(2,'0')};
+    if((m=/\b(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-z]*[\s\/\-\.]*(\d{2}|\d{4})\b/.exec(sem))){ const y=m[2].length===2?2000+(+m[2]):+m[2]; return {comp:y+'-'+String(MESES_NOME[m[1]]).padStart(2,'0')}; }
+    if((m=/^(\d{1,2})\s*[\/\-\.]\s*(\d{2})$/.exec(sem))&&+m[1]>=1&&+m[1]<=12) return {comp:(2000+(+m[2]))+'-'+m[1].padStart(2,'0')};
+    return null;
+  }
+  const _ehNum=x=>/^-?(\d{1,3}(\.\d{3})*|\d+),\d+$|^-?\d+(\.\d+)?$/.test(x);
+  function _celulas(ln){ let c=ln.split(/\t|;/).map(x=>x.trim()).filter(x=>x!==''); // colunas vazias do Excel são ignoradas
+    if(c.length===1){ const t=c[0].split(/\s+/); // sem tabulação: competência e valor separados por espaço
+      if(t.length>=3&&lerCompetencia(t[t.length-1])&&_ehNum(t[t.length-2])) c=[t.slice(0,-2).join(' '),t[t.length-2],t[t.length-1]];
+      else if(t.length>=2) c=[t.slice(0,-1).join(' '),t[t.length-1]]; }
+    return c; }
 
   function lerParcelas(texto) { // texto colado do Excel -> {parcelas, erros, notas}
-    const parcelas = [], erros = [], notas = [];
+    const parcelas = [], erros = [], notas = []; let anterior = null;
     String(texto || '').split(/\r?\n/).forEach((ln, i) => {
-      if (!ln.trim()) return; const c = ln.split(/\t|;/).map(x => x.trim()).filter(x => x !== ''); // ignora colunas vazias coladas do Excel
+      if (!ln.trim()) return; const c = _celulas(ln); // ignora colunas vazias e aceita espaço no lugar da tabulação
       let v = c[1] === undefined ? NaN : String(c[1]).replace(/R\$\s*/, '').trim(); if (typeof v === 'string') v = v.includes(',') ? v.replace(/\./g, '').replace(',', '.') : v; v = Number(v);
       let r = lerCompetencia(c[0]); if (c[2]) { const r2 = lerCompetencia(c[2]); if (r2) r = r2; }
+      if (!r && !isNaN(v) && anterior) r = { comp: anterior, nota: c[0] + ' usa a competência da linha anterior (' + mLbl(anterior) + ')' }; // ex.: Férias
       if (isNaN(v) || !r) { erros.push('Linha ' + (i + 1) + ': informe valor e competência (MM/AAAA, mmm/aa ou 13.º/AAAA). Não inclua a linha de títulos.'); return; }
       if (r.nota && !notas.includes(r.nota)) notas.push(r.nota);
-      parcelas.push({ rotulo: c[0], valor: v, competencia: r.comp });
+      anterior = r.comp; parcelas.push({ rotulo: c[0], valor: v, competencia: r.comp });
     });
     return { parcelas, erros, notas };
   }
