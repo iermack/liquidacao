@@ -632,7 +632,14 @@ async function montaXlsxModelo(D){
     'Assunto: '+D.assuntoXl,'Critérios: Correção Monetária e Juros conforme Manual de Cálculos da Justiça Federal (ed. 2026)','Período: '+D.per,
     'Ajuizamento: '+(D.ajuiz||'[INFORMAR]')+'  |  citação: '+(D.cit||'[INFORMAR]')+'  |  data-base: '+D.dataBase];
   let rowsXml=''; for(let i=0;i<6;i++){ const s=/\[/.test(cab[i])?3:2; rowsXml+=ROW(i+1)+is('A'+(i+1),s,cab[i])+'BCDEFGHIJK'.split('').map(c=>bl(c+(i+1),s)).join('')+'</row>'; }
-  const h=XLC.s1_head.match(/<row [\s\S]*?<\/row>/g); rowsXml+=h[6]+h[7];
+  const h=XLC.s1_head.match(/<row [\s\S]*?<\/row>/g); let h8=h[7];
+  const perF=(a,b)=>'TEXT(MONTH(Parâmetros!$B$'+a+'),"00")&"/"&YEAR(Parâmetros!$B$'+a+')&" A "&TEXT(MONTH(Parâmetros!$B$'+b+'),"00")&"/"&YEAR(Parâmetros!$B$'+b+')';
+  const perSel='12/2021 A 08/2025', perTl='09/2025 A '+mLbl(P.tlFim);
+  [['G8','"SELIC ACUMULADA (SOMENTE "&'+perF(7,8)+'&")"','SELIC ACUMULADA (SOMENTE '+perSel+')'],['H8','"JUROS SELIC ("&'+perF(7,8)+'&")"','JUROS SELIC ('+perSel+')'],
+   ['I8','"TAXA LEGAL ACUMULADA (SOMENTE "&'+perF(9,10)+'&")"','TAXA LEGAL ACUMULADA (SOMENTE '+perTl+')'],['J8','"JUROS TAXA LEGAL ("&'+perF(9,10)+'&")"','JUROS TAXA LEGAL ('+perTl+')']].forEach(([ref,f,txt])=>{
+    h8=h8.replace(new RegExp('<c r="'+ref+'"[^>]*?(?:/>|>[\\s\\S]*?</c>)'),m=>{ const sid=(m.match(/ s="(\d+)"/)||[])[1]||'0'; return fm(ref,sid,f,txt,true); }); });
+  h8=h8.replace(/ ht="[^"]*"/,' ht="68"').replace(/customHeight="[^"]*"/,'customHeight="true"');
+  rowsXml+=h[6]+h8;
   const st=XLC.s1_st; D.rows.forEach((r,i)=>{ const x=9+i, rot=r.rotulo; const sa=st.par;
     let c=ROW(x)+(rot?is('A'+x,sa.A,rot):nv('A'+x,sa.A,_serK(r.comp)))+nv('B'+x,sa.B,r.valor);
     c+=rot?nv('C'+x,sa.C,_serK(r.comp)):fm('C'+x,sa.C,'IF(ISNUMBER(A'+x+'),A'+x+',"")',_serK(r.comp));
@@ -644,12 +651,23 @@ async function montaXlsxModelo(D){
   const last=8+n, t=last+1, tt=st.tot; const sumf=(col,v)=>fm(col+t,tt[col],'SUM('+col+'9:'+col+last+')',v);
   rowsXml+=ROW(t)+is('A'+t,tt.A,'Total')+sumf('B',S.valor)+bl('C'+t,tt.C)+bl('D'+t,tt.D)+sumf('E',S.princ)+sumf('F',S.jAte)+bl('G'+t,tt.G)+sumf('H',S.jSel)+bl('I'+t,tt.I)+sumf('J',S.jTl)+sumf('K',S.total)+'</row>';
   const rh=t+2; rowsXml+=ROW(rh)+is('A'+rh,st.rh.A,'RESUMO')+'</row>';
-  const itens=[['Valor devido (nominal)','B'+t,S.valor],['Principal corrigido (cor/mon)','E'+t,S.princ],['Juros até 12/2021','F'+t,S.jAte],['Juros SELIC (12/2021 a 08/2025)','H'+t,S.jSel],['Juros taxa legal (a partir de 09/2025)','J'+t,S.jTl]];
+  const itens=[['Valor devido (nominal)','B'+t,S.valor],['Principal corrigido (cor/mon)','E'+t,S.princ],['Juros até 12/2021','F'+t,S.jAte],['Juros SELIC (somente 12/2021 a 08/2025)','H'+t,S.jSel],['Juros taxa legal (somente 09/2025 a '+mLbl(P.tlFim)+')','J'+t,S.jTl]];
   itens.forEach((it,k)=>{ const x=rh+1+k; rowsXml+=ROW(x)+is('A'+x,st.it.A,it[0])+bl('B'+x,st.it.B)+bl('C'+x,st.it.C)+bl('D'+x,st.it.D)+fm('E'+x,st.it.E,it[1],it[2])+'</row>'; });
   const xf=rh+6, tituloTot='TOTAL ATUALIZADO EM '+D.dataBase;
   rowsXml+=ROW(xf)+fm('A'+xf,st.fin.A,'"TOTAL ATUALIZADO EM "&TEXT(DAY(Parâmetros!$B$5),"00")&"/"&TEXT(MONTH(Parâmetros!$B$5),"00")&"/"&YEAR(Parâmetros!$B$5)',tituloTot,true)+bl('B'+xf,st.fin.B)+bl('C'+xf,st.fin.C)+bl('D'+xf,st.fin.D)+fm('E'+xf,st.fin.E,'E'+t+'+F'+t+'+H'+t+'+J'+t,S.total)+'</row>';
-  let merges='<mergeCells count="'+(6+6)+'">'+[1,2,3,4,5,6].map(r=>'<mergeCell ref="A'+r+':K'+r+'"/>').join('')+[1,2,3,4,5,6].map(k=>'<mergeCell ref="A'+(rh+k)+':D'+(rh+k)+'"/>').join('')+'</mergeCells>';
-  const s1=XLC.s1_prefix.replace(/<dimension ref="[^"]*"\/>/,'<dimension ref="A1:K'+xf+'"/>')+'<sheetData>'+rowsXml+'</sheetData>'+XLC.s1_mid+merges+XLC.s1_tail;
+  // nota explicativa (períodos sucessivos) + exemplo da parcela mais antiga
+  let sty=dec.decode(files['xl/styles.xml']); const cxm=sty.match(/<cellXfs count="(\d+)">([\s\S]*?)<\/cellXfs>/);
+  const xfs=cxm[2].match(/<xf [^>]*\/>|<xf [^>]*>[\s\S]*?<\/xf>/g); const fontOf=i=>((xfs[+i]||'').match(/fontId="(\d+)"/)||[])[1]||'0';
+  const nX=xfs.length, wrapXf=f=>'<xf numFmtId="0" fontId="'+f+'" fillId="0" borderId="0" xfId="0" applyFont="true" applyBorder="false" applyAlignment="true" applyProtection="false"><alignment horizontal="general" vertical="top" textRotation="0" wrapText="true" indent="0" shrinkToFit="false"/><protection locked="true" hidden="false"/></xf>';
+  sty=sty.replace(cxm[0],'<cellXfs count="'+(nX+2)+'">'+cxm[2]+wrapXf(fontOf(st.rh.A))+wrapXf(fontOf(st.it.A))+'</cellXfs>'); const sTit=nX, sNota=nX+1;
+  let f2=1; for(const k of mRange('2025-09',P.tlFim)) f2*=1+I.ipcae[k]/100;
+  const notas=[[sTit,16,'NOTA – SELIC E TAXA LEGAL SÃO PERÍODOS SUCESSIVOS, SEM SOBREPOSIÇÃO'],
+    [sNota,62,'A SELIC (coluna G) soma somente as taxas de 12/2021 a 08/2025. A taxa legal (coluna I) soma somente as taxas de 09/2025 (ou da competência, se posterior) até o mês anterior à data-base (Manual 2026, Nota 7 do item 4.2.2). Nenhum mês é contado duas vezes. A taxa legal incide sobre todas as parcelas porque, a partir de 09/2025, toda dívida ainda em aberto passa a ser remunerada por ela, inclusive as de competência anterior; até 08/2025 essas parcelas foram remuneradas pela SELIC. É o procedimento do 2º exemplo do Manual 2026 (item 4.2.1.1, Nota 6, pp. 51-52).'],
+    [sNota,46,_exemploParecer(D,f2)]].filter(x=>x[2]);
+  const n0=xf+2; notas.forEach(([sid,ht,tx],k)=>{ const x=n0+k; rowsXml+='<row r="'+x+'" customFormat="false" ht="'+ht+'" hidden="false" customHeight="true" outlineLevel="0" collapsed="false">'+is('A'+x,sid,tx)+'BCDEFGHIJK'.split('').map(c=>bl(c+x,sid)).join('')+'</row>'; });
+  const lastRow=n0+notas.length-1;
+  let merges='<mergeCells count="'+(6+6+notas.length)+'">'+[1,2,3,4,5,6].map(r=>'<mergeCell ref="A'+r+':K'+r+'"/>').join('')+[1,2,3,4,5,6].map(k=>'<mergeCell ref="A'+(rh+k)+':D'+(rh+k)+'"/>').join('')+notas.map((x,k)=>'<mergeCell ref="A'+(n0+k)+':K'+(n0+k)+'"/>').join('')+'</mergeCells>';
+  const s1=XLC.s1_prefix.replace(/<dimension ref="[^"]*"\/>/,'<dimension ref="A1:K'+lastRow+'"/>')+'<sheetData>'+rowsXml+'</sheetData>'+XLC.s1_mid+merges+XLC.s1_tail;
   // ---- Planilha1 (valores fixos, usados no Anexo I)
   const s2st=XLC.s2_st; let r2=XLC.s2_head; D.rows.forEach((r,i)=>{ const x=2+i; r2+='<row r="'+x+'" customFormat="false" ht="12.75" hidden="false" customHeight="false" outlineLevel="0" collapsed="false">'+(r.rotulo?is('A'+x,s2st.A,r.rotulo):nv('A'+x,s2st.A,_serK(r.comp)))+nv('B'+x,s2st.B,r.valor)+nv('C'+x,s2st.C,_serK(r.comp))+nv('D'+x,s2st.D,+r.coef.toFixed(10))+nv('E'+x,s2st.E,+r.princ.toFixed(2))+nv('F'+x,s2st.F,+r.sel.toFixed(4))+nv('G'+x,s2st.G,+r.jSel.toFixed(2))+nv('H'+x,s2st.H,+r.tl.toFixed(4))+nv('I'+x,s2st.I,+r.jTl.toFixed(2))+nv('J'+x,s2st.J,+r.total.toFixed(2))+'</row>'; });
   const s2=XLC.s2_prefix.replace(/<dimension ref="[^"]*"\/>/,'<dimension ref="A1:J'+(n+1)+'"/>')+'<sheetData>'+r2+'</sheetData>'+XLC.s2_tail;
@@ -672,7 +690,8 @@ async function montaXlsxModelo(D){
   sub('B5',m=>m.replace(/<v>[^<]*<\/v>/,'<v>'+baseSer+'</v>')); sub('B10',m=>m.replace(/<v>[^<]*<\/v>/,'<v>'+ultSer+'</v>')); sub('B12',m=>m.replace(/<v>[^<]*<\/v>/,'<v>'+f15+'</v>'));
   sub('B13',m=>m.replace(/<f[^>]*>[\s\S]*?<\/f>/,'<f>'+_xe('SUMIFS(Índices!$J$5:$J$400,Índices!$I$5:$I$400,">="&B9,Índices!$I$5:$I$400,"<="&B10)')+'</f>').replace(/<v>[^<]*<\/v>/,'<v>'+tlsum+'</v>'));
   let wbx=dec.decode(files['xl/workbook.xml']).replace(/activeTab="\d+"/,'activeTab="0"');
-  const ordem=Object.keys(files); const sub2={'xl/worksheets/sheet1.xml':s1,'xl/worksheets/sheet2.xml':s2,'xl/worksheets/sheet3.xml':s3,'xl/worksheets/sheet4.xml':s4,'xl/workbook.xml':wbx};
+  const ssx=dec.decode(files['xl/sharedStrings.xml']).replace('Não incide sobre os juros até 12/2021 nem sobre os juros SELIC.','Não incide sobre os juros até 12/2021 nem sobre os juros SELIC. Incide sobre todas as parcelas em aberto em set/2025, somente pelos meses de set/2025 em diante: é período sucessivo ao da SELIC (G), sem sobreposição.');
+  const ordem=Object.keys(files); const sub2={'xl/styles.xml':sty,'xl/sharedStrings.xml':ssx,'xl/worksheets/sheet1.xml':s1,'xl/worksheets/sheet2.xml':s2,'xl/worksheets/sheet3.xml':s3,'xl/worksheets/sheet4.xml':s4,'xl/workbook.xml':wbx};
   return _zip(ordem.map(nm=>({nome:nm,dados:sub2[nm]!==undefined?enc.encode(sub2[nm]):files[nm]}))); }
 async function gerarModelo(tipo){ const msg=$('genMsg'); const D=dadosCaso(); if(D.erro){ msg.textContent=D.erro; return; }
   try{ const nome=(D.nome||'caso').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'').toUpperCase();
